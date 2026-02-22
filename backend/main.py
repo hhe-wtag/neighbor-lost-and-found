@@ -2,6 +2,7 @@ import uvicorn
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 
+from app.api.v1.api import api_router as api_v1_router
 from app.core.database import engine, Base
 
 
@@ -15,9 +16,11 @@ async def lifespan(_app: FastAPI):
 
 app = FastAPI(lifespan=lifespan)
 
+app.include_router(api_v1_router, prefix="/api")
+
 
 @app.get("/")
-def root():
+async def root():
     return {"message": "Application is running!"}
 
 
