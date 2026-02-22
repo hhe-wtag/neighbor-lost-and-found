@@ -2,7 +2,7 @@ import enum
 from datetime import datetime, UTC
 from typing import Optional
 from sqlalchemy import String, DateTime, Enum, func
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.database import Base
 
@@ -26,6 +26,10 @@ class User(Base):
     )
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), onupdate=func.now(), nullable=True
+    )
+
+    sessions: Mapped[list["Session"]] = relationship(
+        "Session", back_populates="user", cascade="all, delete-orphan"
     )
 
     def __repr__(self) -> str:
