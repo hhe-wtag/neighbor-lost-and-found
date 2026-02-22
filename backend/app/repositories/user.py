@@ -11,6 +11,15 @@ class UserRepository(BaseRepository[User, UserCreate, UserUpdate]):
     def __init__(self, session: AsyncSession):
         super().__init__(User, session)
 
+    async def create(self, schema: UserCreate) -> User:
+        instance = User(
+            **schema.model_dump(exclude={"password"}), hashed_password=schema.password
+        )
+        self.session.add(instance)
+        await self.session.commit()
+        await self.session.refresh(instance)
+        return instance
+
     async def get_by_email(self, email: str) -> Optional[User]:
         result = await self.session.execute(select(User).where(User.email == email))
         return result.scalar_one_or_none()
