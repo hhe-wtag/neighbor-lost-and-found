@@ -3,13 +3,11 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 
 from app.api.v1.api import api_router as api_v1_router
-from app.core.database import engine, Base
+from app.core.database import engine
 
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
     yield
     await engine.dispose()
 
