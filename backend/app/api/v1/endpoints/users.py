@@ -1,20 +1,10 @@
 from fastapi import APIRouter, HTTPException, status
 from typing import List
 
-from app.schemas.user import UserCreate, UserRead, UserUpdate
+from app.schemas.user import UserRead, UserUpdate
 from app.api.v1.deps import UserRepoDep
 
 router = APIRouter(prefix="/users", tags=["Users"])
-
-
-@router.post("/", response_model=UserRead, status_code=status.HTTP_201_CREATED)
-async def create_user(schema: UserCreate, repo: UserRepoDep):
-    existing_user = await repo.get_by_email(email=schema.email)
-    if existing_user:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail="Email already registered"
-        )
-    return await repo.create(schema)  # plain for now
 
 
 @router.get("/", response_model=List[UserRead])
