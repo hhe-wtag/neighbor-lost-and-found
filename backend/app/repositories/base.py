@@ -32,8 +32,11 @@ class BaseRepository(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         )
         return result.scalar_one()
 
-    async def create(self, schema: CreateSchemaType) -> ModelType:
-        instance = self.model(**schema.model_dump(mode="json"))
+    async def create(self, schema: CreateSchemaType, **kwargs) -> ModelType:
+        data = schema.model_dump(exclude=set(kwargs.keys()))  # remove mode="json"
+        data.update(kwargs)
+        instance = self.model(**data)
+
         self.session.add(instance)
         await self.session.commit()
         await self.session.refresh(instance)
