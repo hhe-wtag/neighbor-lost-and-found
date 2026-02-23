@@ -28,11 +28,25 @@ services:
       - "8000:8000"
     env_file:
       - ./backend/.env.docker
-    environment:
-      DATABASE_URL: postgresql+asyncpg://postgres:secretpass@db:5432/nlf_db
     depends_on:
       db:
         condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - nlf_network
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        - VITE_API_URL=${VITE_API_URL}
+    container_name: nlf_frontend
+    ports:
+      - "80:80"
+
+    depends_on:
+      - backend
     restart: unless-stopped
     networks:
       - nlf_network
