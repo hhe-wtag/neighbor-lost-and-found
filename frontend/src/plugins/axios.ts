@@ -3,7 +3,7 @@ import router from '@/router'
 import { useUserStore } from '@/stores/user'
 
 const axiosInstance = axios.create({
-  baseURL: 'http://localhost:8080/api/v1',
+  baseURL: import.meta.env.VITE_API_URL,
   withCredentials: true, // sends cookies automatically with every request
 })
 
