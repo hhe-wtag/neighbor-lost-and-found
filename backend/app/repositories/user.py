@@ -11,9 +11,9 @@ class UserRepository(BaseRepository[User, UserCreate, UserUpdate]):
     def __init__(self, session: AsyncSession):
         super().__init__(User, session)
 
-    async def create(self, schema: UserCreate) -> User:
+    async def create(self, schema: UserCreate, hashed_password: str) -> User:
         instance = User(
-            **schema.model_dump(exclude={"password"}), hashed_password=schema.password
+            **schema.model_dump(exclude={"password"}), hashed_password=hashed_password
         )
         self.session.add(instance)
         await self.session.commit()

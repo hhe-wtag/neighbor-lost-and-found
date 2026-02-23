@@ -32,3 +32,8 @@ class SessionTokenData(BaseModel):
 
     def get_id(self) -> int | None:
         return int(self.user_id) if self.user_id else None
+
+
+class LoginRequest(BaseModel):
+    email: str
+    password: str

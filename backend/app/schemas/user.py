@@ -25,7 +25,6 @@ class UserBase(BaseModel):
 
 class UserCreate(UserBase):
     password: str = Field(min_length=8, max_length=128)
-    role: UserRole = UserRole.USER
 
     @field_validator("password")
     @classmethod
@@ -58,6 +57,6 @@ class UserRead(UserBase):
     id: int
     role: UserRole
     created_at: datetime
-    updated_at: datetime
+    updated_at: Optional[datetime] = None
 
-    model_config = ConfigDict(from_attributes=True)
+    model_config = ConfigDict(from_attributes=True, use_enum_values=True)
