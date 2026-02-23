@@ -1,12 +1,7 @@
 export interface UserProfile {
   _id: string
-  firstName: string
-  lastName: string
+  name: string
   email: string | null
-  contactNumber: string
-  balance: number
-  registrationDate: string
-  address: Address | null
 }
 
 export interface Address {
