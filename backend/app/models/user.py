@@ -25,7 +25,10 @@ class User(Base):
         DateTime(timezone=True), default=lambda: datetime.now(UTC), nullable=False
     )
     updated_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), onupdate=func.now(), default=None, nullable=True,
+        DateTime(timezone=True),
+        onupdate=func.now(),
+        default=None,
+        nullable=True,
     )
 
     sessions: Mapped[list["Session"]] = relationship(
