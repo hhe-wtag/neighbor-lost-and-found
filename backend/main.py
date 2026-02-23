@@ -4,6 +4,7 @@ from fastapi import FastAPI
 
 from app.api.v1.api import api_router as api_v1_router
 from app.core.database import engine
+from app.middleware.logger import LoggingMiddleware
 
 
 @asynccontextmanager
@@ -13,6 +14,8 @@ async def lifespan(_app: FastAPI):
 
 
 app = FastAPI(lifespan=lifespan)
+
+app.add_middleware(LoggingMiddleware)
 
 app.include_router(api_v1_router, prefix="/api")
 
