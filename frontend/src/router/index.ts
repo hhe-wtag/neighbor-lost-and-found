@@ -62,9 +62,10 @@ const router = createRouter({
   ],
 })
 
-router.beforeEach((to, from, next) => {
+router.beforeEach(async (to, from, next) => {
   const userStore = useUserStore()
-  const isAuthenticated = !!userStore.token
+
+  const isAuthenticated = userStore.isAuthenticated // ✅ based on profile now
 
   if (to.meta.requiresAuth && !isAuthenticated) {
     next('/login')

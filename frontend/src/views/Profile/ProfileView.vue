@@ -19,37 +19,9 @@
 
   <ScrollArea v-else-if="userStore.profile" class="grid gap-8 pr-4 max-h-[500px] overflow-auto">
     <div class="flex flex-col gap-8">
-      <ProfileField
-        icon="User"
-        label="Full Name"
-        :value="`${userStore.profile.firstName || ''} ${userStore.profile.lastName || ''}`"
-      />
+      <ProfileField icon="User" label="Full Name" :value="`${userStore.profile.name || ''}`" />
 
       <ProfileField icon="Mail" label="Email" :value="userStore.profile.email || 'N/A'" />
-
-      <ProfileField
-        icon="Phone"
-        label="Contact Number"
-        :value="userStore.profile.contactNumber || ''"
-      />
-
-      <ProfileField
-        icon="DollarSign"
-        label="Balance"
-        :value="userStore.profile.balance?.toString() ?? '0'"
-      />
-
-      <ProfileField
-        icon="Calendar"
-        label="Registration Date"
-        :value="new Date(userStore.profile.registrationDate).toLocaleString()"
-      />
-
-      <ProfileField
-        icon="MapPin"
-        label="Address"
-        :value="formatAddress(userStore.profile.address)"
-      />
     </div>
   </ScrollArea>
 </template>
@@ -67,29 +39,9 @@ const { handleError } = useErrorHandler()
 const userStore = useUserStore()
 const loading = ref(true)
 
-interface Address {
-  street?: string | null
-  city?: string | null
-  state?: string | null
-  zipCode?: string | null
-  country?: string | null
-}
-
-const formatAddress = (address: Address | null): string => {
-  if (!address) return 'N/A'
-  const { street, city, state, zipCode, country } = address
-  return [
-    `Street: ${street || 'N/A'}`,
-    `City: ${city || 'N/A'}`,
-    `State: ${state || 'N/A'}`,
-    `Zip Code: ${zipCode || 'N/A'}`,
-    `Country: ${country || 'N/A'}`,
-  ].join(', ')
-}
-
 onMounted(async () => {
   try {
-    await userStore.fetchUserProfile()
+    // await userStore.fetchUserProfile()
   } catch (error) {
     console.error('Error occurred:', handleError(error))
   } finally {

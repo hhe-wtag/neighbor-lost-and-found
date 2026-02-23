@@ -13,7 +13,6 @@ import { Input } from '@/components/ui/input'
 import { toast } from '@/components/ui/toast'
 import { toTypedSchema } from '@vee-validate/zod'
 import { useForm } from 'vee-validate'
-import { h } from 'vue'
 import * as z from 'zod'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user.ts'
@@ -23,19 +22,8 @@ const userStore = useUserStore()
 
 const formSchema = toTypedSchema(
   z.object({
-    firstName: z
-      .string()
-      .min(2, 'First Name must have at least 2 characters.')
-      .nonempty('First Name is required.'),
-    lastName: z
-      .string()
-      .min(2, 'Last Name must have at least 2 characters.')
-      .nonempty('Last Name is required.'),
+    name: z.string().min(2, 'Name must have at least 2 characters.').nonempty('Name is required.'),
     email: z.string().email('Please enter a valid email address.').nonempty('Email is required.'),
-    contactNumber: z
-      .string()
-      .regex(/^01\d{9}$/, 'Contact Number must be 11 digits and start with 01.')
-      .nonempty('Contact Number is required.'),
     password: z
       .string()
       .min(8, 'Password must be at least 8 characters.')
@@ -81,33 +69,18 @@ const redirectToLogin = () => {
       </CardHeader>
       <CardContent>
         <form @submit="onSubmit" class="space-y-4">
-          <div class="grid grid-cols-2 gap-4">
-            <FormField name="firstName" v-slot="{ componentField }">
-              <FormItem>
-                <FormLabel>
-                  First Name
-                  <span class="text-red-500 ml-1">*</span>
-                </FormLabel>
-                <FormControl>
-                  <Input type="text" placeholder="John" v-bind="componentField" />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            </FormField>
-
-            <FormField name="lastName" v-slot="{ componentField }">
-              <FormItem>
-                <FormLabel>
-                  Last Name
-                  <span class="text-red-500 ml-1">*</span>
-                </FormLabel>
-                <FormControl>
-                  <Input type="text" placeholder="Doe" v-bind="componentField" />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            </FormField>
-          </div>
+          <FormField name="name" v-slot="{ componentField }">
+            <FormItem>
+              <FormLabel>
+                Name
+                <span class="text-red-500 ml-1">*</span>
+              </FormLabel>
+              <FormControl>
+                <Input type="text" placeholder="John" v-bind="componentField" />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          </FormField>
 
           <FormField name="email" v-slot="{ componentField }">
             <FormItem>
@@ -117,19 +90,6 @@ const redirectToLogin = () => {
               </FormLabel>
               <FormControl>
                 <Input type="email" placeholder="you@example.com" v-bind="componentField" />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          </FormField>
-
-          <FormField name="contactNumber" v-slot="{ componentField }">
-            <FormItem>
-              <FormLabel>
-                Contact Number
-                <span class="text-red-500 ml-1">*</span>
-              </FormLabel>
-              <FormControl>
-                <Input type="text" placeholder="01234567890" v-bind="componentField" />
               </FormControl>
               <FormMessage />
             </FormItem>
