@@ -12,7 +12,7 @@ export const useErrorHandler = () => {
         )
       }
 
-      return apiError?.message || 'An unexpected error occurred.'
+      return apiError?.message || apiError?.detail || 'An unexpected error occurred.'
     }
 
     if (error instanceof Error) {

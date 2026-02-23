@@ -218,7 +218,7 @@ const redirectToProfile = () => {
 const loadUserProfile = async () => {
   if (!userStore.profile) {
     try {
-      await userStore.fetchUserProfile()
+      // await userStore.fetchUserProfile()
     } catch (error) {
       console.error('Error loading profile:', error)
     }

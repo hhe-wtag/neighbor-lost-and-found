@@ -9,37 +9,32 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
-import { LogOut, User, PackageCheck, ClipboardList } from 'lucide-vue-next'
+import { LogOut, User } from 'lucide-vue-next'
 import { computed, onMounted } from 'vue'
 import DropdownMenuSeparator from '../ui/dropdown-menu/DropdownMenuSeparator.vue'
-import { ScrollArea } from '@/components/ui/scroll-area'
-
-import { formatDate } from '@/utils/timeFunctions'
 
 const router = useRouter()
 const userStore = useUserStore()
 
 onMounted(async () => {
   try {
-    if (userStore.isAuthenticated) {
-      await userStore.fetchUserProfile()
-    }
+    await userStore.fetchUserProfile()
   } catch (error) {
     console.error('Error occurred:', error)
   }
 })
 
 const firstLetter = computed(() => {
-  return userStore.profile?.firstName?.[0]?.toUpperCase()
+  return userStore.profile?.name?.[0]?.toUpperCase()
 })
 
-const firstName = computed(() => {
-  const firstName = userStore.profile?.firstName || ''
-  return firstName ? `${firstName}` : 'User'
+const name = computed(() => {
+  const name = userStore.profile?.name || ''
+  return name ? `${name}` : 'User'
 })
 
-const handleLogout = () => {
-  userStore.logout()
+const handleLogout = async () => {
+  await userStore.logout()
   router.push('/login')
 }
 </script>
@@ -80,7 +75,7 @@ const handleLogout = () => {
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" class="w-56">
             <div class="px-2 py-1.5 text-sm">
-              Hello, <span class="font-bold">{{ firstName }}</span>
+              Hello, <span class="font-bold">{{ name }}</span>
             </div>
             <DropdownMenuSeparator />
             <DropdownMenuItem @click="router.push('/profile')">
