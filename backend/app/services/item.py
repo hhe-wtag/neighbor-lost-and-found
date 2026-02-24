@@ -1,10 +1,12 @@
+import math
 from datetime import datetime, UTC
 from typing import Optional, Sequence
 
 from app.core.exception import ForbiddenException, NotFoundException
 from app.models.item import Item, ItemCategory, ItemStatus, ItemType
 from app.repositories.item import ItemRepository
-from app.schemas.item import ItemCreate, ItemUpdate
+from app.schemas.base_response import PaginatedData
+from app.schemas.item import ItemCreate, ItemUpdate, ItemListResponse
 
 
 class ItemService:
@@ -44,6 +46,38 @@ class ItemService:
             status=status,
             offset=offset,
             limit=limit,
+        )
+
+    # ------------------------------------------------------------------
+    # List items with optional filters
+    # ------------------------------------------------------------------
+    async def list_items_paginated(
+        self,
+        *,
+        type: Optional[ItemType] = None,
+        category: Optional[ItemCategory] = None,
+        status: Optional[ItemStatus] = None,
+        offset: int = 0,
+        limit: int = 20,
+    ) -> PaginatedData[Item]:
+        items, total = await self.repo.get_all_filtered_paginated(
+            type=type,
+            category=category,
+            status=status,
+            offset=offset,
+            limit=limit,
+        )
+        return PaginatedData(
+            items=[
+                ItemListResponse.model_validate(item) for item in items
+            ],  # ← convert here
+            total=total,
+            page=(offset // limit) + 1,
+            total_pages=math.ceil(total / limit) if total > 0 else 1,
+            offset=offset,
+            limit=limit,
+            has_next=offset + limit < total,
+            has_prev=offset > 0,
         )
 
     # ------------------------------------------------------------------

@@ -3,6 +3,7 @@ from typing import Optional
 from fastapi import APIRouter, Query, status
 
 from app.api.v1.deps import ItemServiceDep, CurrentUserDep
+from app.core.response import success_response
 from app.models.item import ItemCategory, ItemStatus, ItemType
 from app.schemas.base_response import APIResponse
 from app.schemas.item import (
@@ -11,7 +12,8 @@ from app.schemas.item import (
     ItemResponse,
     ItemUpdate,
 )
-
+from fastapi.encoders import jsonable_encoder
+from app.schemas.base_response import PaginatedData
 
 router = APIRouter(prefix="/items", tags=["Items"])
 
@@ -39,7 +41,7 @@ async def create_item(
 # ------------------------------------------------------------------
 # GET /items — browse listings with optional filters
 # ------------------------------------------------------------------
-@router.get("/", response_model=APIResponse[list[ItemListResponse]])
+@router.get("/", response_model=APIResponse[PaginatedData[ItemListResponse]])
 async def list_items(
     service: ItemServiceDep,
     type: Optional[ItemType] = Query(None),
@@ -48,19 +50,41 @@ async def list_items(
     offset: int = Query(0, ge=0),
     limit: int = Query(20, ge=1, le=100),
 ):
-    items = await service.list_items(
+    result = await service.list_items_paginated(
         type=type,
         category=category,
         status=status,
         offset=offset,
         limit=limit,
     )
+    return success_response(
+        data=jsonable_encoder(result, by_alias=False),
+        message="Items retrieved successfully.",
+    )
 
-    return {
-        "success": True,
-        "data": items,
-        "message": "Items retrieved successfully.",
-    }
+
+# @router.get("/", response_model=APIResponse[list[ItemListResponse]])
+# async def list_items(
+#     service: ItemServiceDep,
+#     type: Optional[ItemType] = Query(None),
+#     category: Optional[ItemCategory] = Query(None),
+#     status: Optional[ItemStatus] = Query(None),
+#     offset: int = Query(0, ge=0),
+#     limit: int = Query(20, ge=1, le=100),
+# ):
+#     items = await service.list_items(
+#         type=type,
+#         category=category,
+#         status=status,
+#         offset=offset,
+#         limit=limit,
+#     )
+#
+#     return {
+#         "success": True,
+#         "data": items,
+#         "message": "Items retrieved successfully.",
+#     }
 
 
 # ------------------------------------------------------------------

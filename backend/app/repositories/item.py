@@ -1,6 +1,6 @@
 from typing import Optional, Sequence
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+from sqlalchemy import select, func
 from sqlalchemy.orm import selectinload
 
 from app.models.item import Item, ItemStatus, ItemType, ItemCategory
@@ -36,7 +36,7 @@ class ItemRepository(BaseRepository[Item, ItemCreate, ItemUpdate]):
         if status:
             query = query.where(Item.status == status)
         else:
-            query = query.where(Item.status == ItemStatus.OPEN)
+            query = query.where(Item.status != ItemStatus.REMOVED)
 
         query = query.order_by(Item.created_at.desc()).offset(offset).limit(limit)
 
@@ -48,3 +48,37 @@ class ItemRepository(BaseRepository[Item, ItemCreate, ItemUpdate]):
             select(Item).where(Item.user_id == user_id).order_by(Item.created_at.desc())
         )
         return result.scalars().all()
+
+    async def get_all_filtered_paginated(
+        self,
+        *,
+        type: Optional[ItemType] = None,
+        category: Optional[ItemCategory] = None,
+        status: Optional[ItemStatus] = None,
+        offset: int = 0,
+        limit: int = 20,
+    ) -> tuple[Sequence[Item], int]:
+        base_query = select(Item)
+
+        if type:
+            base_query = base_query.where(Item.type == type)
+        if category:
+            base_query = base_query.where(Item.category == category)
+        if status:
+            base_query = base_query.where(Item.status == status)
+        else:
+            base_query = base_query.where(Item.status != ItemStatus.REMOVED)
+
+        count_result = await self.session.execute(
+            select(func.count()).select_from(base_query.subquery())
+        )
+        total = count_result.scalar_one()
+
+        items_result = await self.session.execute(
+            base_query.options(selectinload(Item.user))
+            .order_by(Item.created_at.desc())
+            .offset(offset)
+            .limit(limit)
+        )
+
+        return items_result.scalars().all(), total
