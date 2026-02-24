@@ -7,6 +7,7 @@ import BaseProfile from '@/views/Profile/BaseProfile.vue'
 import EditProfile from '@/views/Profile/EditProfile.vue'
 import ProfileView from '@/views/Profile/ProfileView.vue'
 import ChangePassword from '@/views/Profile/ChangePassword.vue'
+import ItemsView from '@/views/Items/ItemsView.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -53,6 +54,17 @@ const router = createRouter({
         },
       ],
     },
+    {
+      path: '/items',
+      name: 'items',
+      component: ItemsView,
+    },
+    {
+      path: '/items/:id',
+      name: 'item-details',
+      component: () => import('@/components/items/ItemDetails.vue'),
+    },
+
     {
       path: '/:pathMatch(.*)*',
       name: 'not-found',
