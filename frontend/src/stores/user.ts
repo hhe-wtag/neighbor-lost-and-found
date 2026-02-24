@@ -12,6 +12,18 @@ export const useUserStore = defineStore('user', {
     isAuthenticated: (state) => !!state.profile,
   },
   actions: {
+    async register(userData: { name: string; email: string; password: string }) {
+      const { handleError } = useErrorHandler()
+      try {
+        const response = await axiosInstance.post('/auth/register', userData)
+
+        return { success: true, message: 'Registration successful' }
+      } catch (error) {
+        this.error = handleError(error) || 'Registration failed'
+        return { success: false, message: this.error }
+      }
+    },
+
     async login(email: string, password: string) {
       const { handleError } = useErrorHandler()
       try {
@@ -24,22 +36,11 @@ export const useUserStore = defineStore('user', {
       }
     },
 
-    async register(userData: { name: string; email: string; password: string }) {
-      const { handleError } = useErrorHandler()
-      try {
-        await axiosInstance.post('/auth/register', userData)
-        return { success: true, message: 'Registration successful' }
-      } catch (error) {
-        this.error = handleError(error) || 'Registration failed'
-        return { success: false, message: this.error }
-      }
-    },
-
     async fetchUserProfile() {
       const { handleError } = useErrorHandler()
       try {
         const response = await axiosInstance.get('/auth/me')
-        this.profile = response.data
+        this.profile = response.data.data
         this.error = null
         return { success: true, message: 'Profile fetched successfully' }
       } catch (error) {
