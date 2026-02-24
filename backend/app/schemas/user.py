@@ -53,7 +53,7 @@ class UserUpdate(BaseModel):
         return v.lower()
 
 
-class UserRead(UserBase):
+class UserResponse(UserBase):
     id: int
     role: UserRole
     created_at: datetime

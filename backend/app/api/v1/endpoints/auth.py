@@ -2,7 +2,7 @@ from fastapi import APIRouter, HTTPException, status, Cookie, Response
 from typing import Annotated, Optional
 
 from app.api.v1.deps import AuthServiceDep
-from app.schemas.user import UserCreate, UserRead
+from app.schemas.user import UserCreate, UserResponse
 from app.schemas.session import LoginRequest
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
@@ -47,7 +47,7 @@ async def logout(
     response.delete_cookie(key="session_token")
 
 
-@router.get("/me", response_model=UserRead)
+@router.get("/me", response_model=UserResponse)
 async def me(
     auth: AuthServiceDep, session_token: Annotated[Optional[str], Cookie()] = None
 ):
