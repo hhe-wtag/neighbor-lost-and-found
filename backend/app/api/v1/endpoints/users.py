@@ -1,18 +1,18 @@
 from fastapi import APIRouter, HTTPException, status
 from typing import List
 
-from app.schemas.user import UserRead, UserUpdate
+from app.schemas.user import UserResponse, UserUpdate
 from app.api.v1.deps import UserRepoDep
 
 router = APIRouter(prefix="/users", tags=["Users"])
 
 
-@router.get("/", response_model=List[UserRead])
+@router.get("/", response_model=List[UserResponse])
 async def get_all_users(repo: UserRepoDep, offset: int = 0, limit: int = 100):
     return await repo.get_all(offset=offset, limit=limit)
 
 
-@router.get("/{user_id}", response_model=UserRead)
+@router.get("/{user_id}", response_model=UserResponse)
 async def get_user(user_id: int, repo: UserRepoDep):
     user = await repo.get_by_id(id=user_id)
     if not user:
@@ -22,7 +22,7 @@ async def get_user(user_id: int, repo: UserRepoDep):
     return user
 
 
-@router.patch("/{user_id}", response_model=UserRead)
+@router.patch("/{user_id}", response_model=UserResponse)
 async def update_user(user_id: int, user_data: UserUpdate, repo: UserRepoDep):
     user = await repo.get_by_id(id=user_id)
     if not user:
