@@ -1,0 +1,61 @@
+services:
+  db:
+    image: postgres
+    container_name: nlf_db
+    volumes:
+      - nlf_data:/var/lib/postgresql
+    environment:
+      POSTGRES_PASSWORD: secretpass
+      POSTGRES_USER: postgres
+      POSTGRES_DB: nlf_db
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - nlf_network
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: nlf_backend
+    ports:
+      - "8000:8000"
+    env_file:
+      - ./backend/.env.docker
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - nlf_network
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        - VITE_API_URL=${VITE_API_URL}
+    container_name: nlf_frontend
+    ports:
+      - "80:80"
+
+    depends_on:
+      - backend
+    restart: unless-stopped
+    networks:
+      - nlf_network
+
+volumes:
+  nlf_data:
+    external: true
+
+networks:
+  nlf_network:
+    driver: bridge
+    name: neighbor-lost-and-found_nlf_network
