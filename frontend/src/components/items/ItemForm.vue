@@ -186,9 +186,6 @@ const formData = ref<ItemCreate>({
  * Populate when editing
  */
 onMounted(async () => {
-  if (itemStore.itemCategories.length === 0) {
-    await itemStore.fetchItemCategories()
-  }
   if (props.item) {
     formData.value = {
       type: props.item.type,

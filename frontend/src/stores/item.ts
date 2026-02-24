@@ -29,15 +29,27 @@ const API_PATHS = {
 ========================= */
 interface ItemStoreState {
   items: ItemListResponse[]
+  total: number
+  offset: number
+  limit: number
   itemCategories: string[]
   currentItem: ItemResponse | null
   loading: boolean
   error: string | null
+  currentPage: number
+  hasNext: boolean
+  hasPrev: boolean
 }
 
 export const useItemStore = defineStore('item', {
   state: (): ItemStoreState => ({
     items: [],
+    total: 0,
+    offset: 0,
+    limit: 12,
+    currentPage: 1,
+    hasNext: false,
+    hasPrev: false,
     currentItem: null,
     itemCategories: [],
     loading: false,
@@ -63,6 +75,8 @@ export const useItemStore = defineStore('item', {
       state.items.filter((item: ItemListResponse) => item.type === 'found'),
 
     hasError: (state): boolean => state.error !== null,
+
+    totalPages: (state): number => Math.ceil(state.total / state.limit),
   },
 
   /* =========================
@@ -121,11 +135,29 @@ export const useItemStore = defineStore('item', {
       offset?: number
       limit?: number
     }) {
-      return this.handleApiCall<ItemListResponse[]>(async () => {
+      return this.handleApiCall<{
+        items: ItemListResponse[]
+        total: number
+        page: number
+        total_pages: number
+        offset: number
+        limit: number
+        has_next: boolean
+        has_prev: boolean
+      }>(async () => {
         const { data } = await axiosInstance.get(API_PATHS.ALL, { params })
         return data
       }, 'Failed to fetch items').then((res) => {
-        if (res.success && res.data) this.items = res.data
+        if (res.success && res.data) {
+          // Map API response to your state
+          this.items = res.data.items
+          this.total = res.data.total
+          this.offset = res.data.offset
+          this.limit = res.data.limit
+          this.currentPage = res.data.page
+          this.hasNext = res.data.has_next
+          this.hasPrev = res.data.has_prev
+        }
         return res
       })
     },
