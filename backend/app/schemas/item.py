@@ -67,6 +67,7 @@ class ItemListResponse(BaseModel):
     user_id: int
     type: ItemType
     title: str
+    description: Optional[str]
     category: ItemCategory
     lat: float
     lng: float
