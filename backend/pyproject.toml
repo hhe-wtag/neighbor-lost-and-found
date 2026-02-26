@@ -18,4 +18,5 @@ dependencies = [
     "starlette>=0.52.1",
     "uvicorn>=0.41.0",
     "pyyaml>=6.0.3",
+    "argon2-cffi>=25.1.0",
 ]
