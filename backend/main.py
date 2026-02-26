@@ -13,6 +13,7 @@ from app.core.exception import (
     validation_exception_handler,
 )
 from app.middleware.logger import LoggingMiddleware
+from app.api.v1.deps import cookie_scheme  # noqa
 
 
 @asynccontextmanager
@@ -21,7 +22,7 @@ async def lifespan(_app: FastAPI):
     await engine.dispose()
 
 
-app = FastAPI(lifespan=lifespan)
+app = FastAPI(lifespan=lifespan, swagger_ui_parameters={"withCredentials": True})
 
 app.add_middleware(LoggingMiddleware)
 app.add_middleware(

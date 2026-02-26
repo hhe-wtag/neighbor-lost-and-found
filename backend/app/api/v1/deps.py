@@ -1,6 +1,8 @@
-from typing import Annotated, Optional
+from typing import Annotated
 
-from fastapi import Cookie, Depends, HTTPException, status
+from fastapi import Depends, HTTPException, status
+
+from fastapi.security import APIKeyCookie
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
@@ -10,6 +12,8 @@ from app.repositories.session import SessionRepository
 from app.repositories.user import UserRepository
 from app.services.auth import AuthService
 from app.services.item import ItemService
+
+cookie_scheme = APIKeyCookie(name="session_token", auto_error=False)
 
 
 # =========================
@@ -45,9 +49,9 @@ ItemServiceDep = Annotated[ItemService, Depends(get_item_service)]
 # =========================
 # Auth Dependencies
 # =========================
-async def get_session_token(
-    session_token: Annotated[Optional[str], Cookie()] = None,
-) -> str:
+
+
+async def get_session_token(session_token: str = Depends(cookie_scheme)) -> str:
     if not session_token:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
