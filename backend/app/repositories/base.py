@@ -33,24 +33,28 @@ class BaseRepository(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         return result.scalar_one()
 
     async def create(self, schema: CreateSchemaType, **kwargs) -> ModelType:
-        data = schema.model_dump(exclude=set(kwargs.keys()))  # remove mode="json"
+        data = schema.model_dump(mode="python", exclude=set(kwargs.keys()))
         data.update(kwargs)
         instance = self.model(**data)
 
         self.session.add(instance)
+        await self.session.flush()
         await self.session.commit()
         await self.session.refresh(instance)
         return instance
 
     async def update(self, instance: ModelType, schema: UpdateSchemaType) -> ModelType:
-        for key, value in schema.model_dump(mode="json", exclude_unset=True).items():
+        for key, value in schema.model_dump(mode="python", exclude_unset=True).items():
             setattr(instance, key, value)
+
+        await self.session.flush()
         await self.session.commit()
         await self.session.refresh(instance)
         return instance
 
     async def delete(self, instance: ModelType) -> None:
         await self.session.delete(instance)
+        await self.session.flush()
         await self.session.commit()
 
     async def exists(self, id: int) -> bool:

@@ -43,7 +43,7 @@ async def login(schema: LoginRequest, auth: AuthServiceDep, response: Response):
         key="session_token",
         value=session_token,
         httponly=True,
-        secure=True,
+        secure=False,
         samesite="lax",
         expires=expires_at,
     )

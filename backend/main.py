@@ -13,6 +13,7 @@ from app.core.exception import (
     validation_exception_handler,
 )
 from app.middleware.logger import LoggingMiddleware
+from app.api.v1.deps import cookie_scheme  # noqa
 
 
 @asynccontextmanager
@@ -21,8 +22,9 @@ async def lifespan(_app: FastAPI):
     await engine.dispose()
 
 
-app = FastAPI(lifespan=lifespan)
+app = FastAPI(lifespan=lifespan, swagger_ui_parameters={"withCredentials": True})
 
+app.add_middleware(LoggingMiddleware)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:5173", "http://localhost"],
@@ -30,7 +32,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-app.add_middleware(LoggingMiddleware)
+
 
 app.add_exception_handler(AppException, app_exception_handler)
 app.add_exception_handler(RequestValidationError, validation_exception_handler)
