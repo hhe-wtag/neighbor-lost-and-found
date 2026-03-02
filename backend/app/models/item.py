@@ -45,6 +45,7 @@ class Item(Base):
     __tablename__ = "items"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+
     user_id: Mapped[int] = mapped_column(
         Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False
     )
@@ -78,6 +79,10 @@ class Item(Base):
 
     photo: Mapped[Optional["ItemPhoto"]] = relationship(
         "ItemPhoto", back_populates="item", uselist=False, cascade="all, delete-orphan"
+    )
+
+    claims: Mapped[list["ItemClaim"]] = relationship(
+        "ItemClaim", back_populates="item", cascade="all, delete-orphan"
     )
 
     def __repr__(self) -> str:
