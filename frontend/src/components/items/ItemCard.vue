@@ -5,6 +5,17 @@
     class="relative overflow-hidden flex flex-col transition-all duration-200 hover:shadow-xl bg-card cursor-pointer"
     @click="router.push(`/items/${item.id}`)"
   >
+    <div class="p-4 w-full h-[250px]">
+      <div class="relative w-full h-full">
+        <img
+          :src="`${baseUrl + '/items/' + item.id + '/photo'}` || placeHolderImage"
+          class="w-full h-full object-cover object-center rounded-lg border"
+          alt=""
+          @error="handleImageError"
+        />
+      </div>
+    </div>
+
     <!-- Card Header -->
     <CardHeader>
       <CardTitle class="text-xl font-bold tracking-tight">
@@ -95,6 +106,7 @@ import Tooltip from '../ui/tooltip/Tooltip.vue'
 import TooltipTrigger from '../ui/tooltip/TooltipTrigger.vue'
 import TooltipContent from '../ui/tooltip/TooltipContent.vue'
 import { formatDate } from '@/utils/timeFunctions'
+import placeHolderImage from '@/assets/product-placeholder.jpg'
 
 const props = defineProps<{
   items: ItemListResponse[]
@@ -106,6 +118,8 @@ const userStore = useUserStore()
 const emit = defineEmits<{
   (e: 'openEditForm', item: ItemListResponse): void
 }>()
+
+const baseUrl = import.meta.env.VITE_API_URL
 
 const isItemOwner = (item: ItemListResponse): boolean => {
   return item.user_id === userStore.profile?.id
@@ -149,5 +163,9 @@ const getBadges = (item: ItemListResponse): Badge[] => {
   }
 
   return badges
+}
+
+const handleImageError = (event: unknown) => {
+  event.target.src = placeHolderImage
 }
 </script>
