@@ -31,26 +31,6 @@ class ItemService:
     # ------------------------------------------------------------------
     # List items with optional filters
     # ------------------------------------------------------------------
-    async def list_items(
-        self,
-        *,
-        type: Optional[ItemType] = None,
-        category: Optional[ItemCategory] = None,
-        status: Optional[ItemStatus] = None,
-        offset: int = 0,
-        limit: int = 100,
-    ) -> Sequence[Item]:
-        return await self.repo.get_all_filtered(
-            type=type,
-            category=category,
-            status=status,
-            offset=offset,
-            limit=limit,
-        )
-
-    # ------------------------------------------------------------------
-    # List items with optional filters
-    # ------------------------------------------------------------------
     async def list_items_paginated(
         self,
         *,
@@ -59,7 +39,7 @@ class ItemService:
         status: Optional[ItemStatus] = None,
         offset: int = 0,
         limit: int = 20,
-    ) -> PaginatedData[Item]:
+    ) -> PaginatedData[ItemListResponse]:
         items, total = await self.repo.get_all_filtered_paginated(
             type=type,
             category=category,
@@ -67,10 +47,9 @@ class ItemService:
             offset=offset,
             limit=limit,
         )
+
         return PaginatedData(
-            items=[
-                ItemListResponse.model_validate(item) for item in items
-            ],  # ← convert here
+            items=[ItemListResponse.model_validate(item) for item in items],
             total=total,
             page=(offset // limit) + 1,
             total_pages=math.ceil(total / limit) if total > 0 else 1,

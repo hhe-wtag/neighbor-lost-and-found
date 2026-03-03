@@ -4,6 +4,7 @@ from sqlalchemy import select, func
 from sqlalchemy.orm import selectinload
 
 from app.models.item import Item, ItemStatus, ItemType, ItemCategory
+from app.models.item_photo import ItemPhoto
 from app.repositories.base import BaseRepository
 from app.schemas.item import ItemCreate, ItemUpdate
 
@@ -12,11 +13,24 @@ class ItemRepository(BaseRepository[Item, ItemCreate, ItemUpdate]):
     def __init__(self, session: AsyncSession):
         super().__init__(Item, session)
 
-    async def get_by_id_with_user(self, id: int) -> Optional[Item]:
-        result = await self.session.execute(
-            select(Item).options(selectinload(Item.user)).where(Item.id == id)
+    async def get_by_id_with_user(self, id: int) -> Item:
+
+        photo_exists = (
+            select(ItemPhoto.item_id).where(ItemPhoto.item_id == Item.id).exists()
         )
-        return result.scalar_one_or_none()
+
+        result = await self.session.execute(
+            select(Item, photo_exists.label("has_photo"))
+            .options(selectinload(Item.user))
+            .where(Item.id == id)
+        )
+        row = result.one_or_none()
+        if row is None:
+            return None
+
+        item, has_photo = row
+        item.has_photo = has_photo
+        return item
 
     async def get_all_filtered(
         self,
@@ -44,10 +58,22 @@ class ItemRepository(BaseRepository[Item, ItemCreate, ItemUpdate]):
         return result.scalars().all()
 
     async def get_all_by_user(self, user_id: int) -> Sequence[Item]:
-        result = await self.session.execute(
-            select(Item).where(Item.user_id == user_id).order_by(Item.created_at.desc())
+        photo_exists = (
+            select(ItemPhoto.item_id).where(ItemPhoto.item_id == Item.id).exists()
         )
-        return result.scalars().all()
+
+        result = await self.session.execute(
+            select(Item, photo_exists.label("has_photo"))
+            .where(Item.user_id == user_id)
+            .order_by(Item.created_at.desc())
+        )
+
+        items = []
+        for item, has_photo in result.all():
+            item.has_photo = has_photo
+            items.append(item)
+
+        return items
 
     async def get_all_filtered_paginated(
         self,
@@ -57,7 +83,7 @@ class ItemRepository(BaseRepository[Item, ItemCreate, ItemUpdate]):
         status: Optional[ItemStatus] = None,
         offset: int = 0,
         limit: int = 20,
-    ) -> tuple[Sequence[Item], int]:
+    ) -> tuple[list[Item], int]:
         base_query = select(Item)
 
         if type:
@@ -74,11 +100,21 @@ class ItemRepository(BaseRepository[Item, ItemCreate, ItemUpdate]):
         )
         total = count_result.scalar_one()
 
+        photo_exists = (
+            select(ItemPhoto.item_id).where(ItemPhoto.item_id == Item.id).exists()
+        )
+
         items_result = await self.session.execute(
-            base_query.options(selectinload(Item.user))
+            base_query.add_columns(photo_exists.label("has_photo"))
+            .options(selectinload(Item.user))
             .order_by(Item.created_at.desc())
             .offset(offset)
             .limit(limit)
         )
 
-        return items_result.scalars().all(), total
+        items = []
+        for item, has_photo in items_result.all():
+            item.has_photo = has_photo
+            items.append(item)
+
+        return items, total

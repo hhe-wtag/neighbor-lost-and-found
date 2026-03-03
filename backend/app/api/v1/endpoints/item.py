@@ -32,7 +32,7 @@ async def create_item(
     return {
         "success": True,
         "data": item,
-        "message": "Item reported successfully.",
+        "message": "Item created successfully.",
     }
 
 

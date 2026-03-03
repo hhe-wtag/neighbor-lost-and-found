@@ -5,6 +5,9 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
+    # App Configuaration
+    BASE_URL: str
+
     # Database configuration
     POSTGRES_USER: str
     POSTGRES_PASSWORD: str
