@@ -1,3 +1,5 @@
+from typing import List
+
 from app.core.exception import NotFoundException, BadRequestException
 from app.models.item import ItemStatus
 from app.models.item_claim import ItemClaim
@@ -16,25 +18,6 @@ class ItemClaimService:
     ) -> ItemClaim:
         """
         Handle the business logic for creating a claim on an item.
-
-        Performs the following validations before creating the claim:
-            1. Item must exist.
-            2. Item status must be OPEN.
-            3. The claimant must not be the item owner.
-            4. The user must not have an existing claim on this item.
-            5. The item must not already have an approved/resolved claim.
-
-        Args:
-            item_id (int): The ID of the item being claimed.
-            current_user_id (int): The ID of the user submitting the claim.
-            payload (ClaimCreate): The claim data provided by the user.
-
-        Returns:
-            ItemClaim: The newly created claim ORM object.
-
-        Raises:
-            NotFoundException: If no item with the given ID exists.
-            BadRequestException: If any of the business rule validations fail.
         """
         item = await self.item_repo.get_by_id(item_id)
         if not item:
@@ -67,3 +50,23 @@ class ItemClaimService:
             item_id=item_id,
             claimant_user_id=current_user_id,
         )
+
+    async def get_claims_for_an_item(
+        self, item_id: int, current_user_id: int
+    ) -> ItemClaim | List[ItemClaim]:
+        item = await self.item_repo.get_by_id(item_id)
+
+        if not item:
+            raise NotFoundException("Item not found")
+
+        if item.user_id == current_user_id:
+            return await self.claim_repo.get_all_by_item(item_id)
+
+        claim = await self.claim_repo.get_by_item_and_claimant(
+            item_id=item_id, claimant_user_id=current_user_id
+        )
+
+        if not claim:
+            return []
+
+        return claim

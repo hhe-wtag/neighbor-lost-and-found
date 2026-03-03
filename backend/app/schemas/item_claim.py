@@ -30,15 +30,13 @@ class ClaimantUserResponse(BaseModel):
 
 
 class ClaimResponse(BaseModel):
-    id: str
-    item_id: str
-    claimant_user_id: str
+    id: int
+    item_id: int
+    claimant_user_id: int
     message: str
     status: ClaimStatus
     created_at: datetime
-    updated_at: Optional[datetime]
-    claimant: ClaimantUserResponse
-    item: ClaimedItemResponse
+    updated_at: Optional[datetime] = None
 
     model_config = {"from_attributes": True}
 
@@ -51,5 +49,21 @@ class ClaimListResponse(BaseModel):
     status: ClaimStatus
     created_at: datetime
     claimant: ClaimantUserResponse
+
+    model_config = {"from_attributes": True}
+
+
+class MyClaimResponse(BaseModel):
+    """
+    Response schema for the authenticated user's own claim on an item.
+    Excludes `claimant` since the caller is already known to be the claimant.
+    """
+
+    id: int
+    item_id: int
+    message: str
+    status: ClaimStatus
+    created_at: datetime
+    updated_at: Optional[datetime] = None
 
     model_config = {"from_attributes": True}

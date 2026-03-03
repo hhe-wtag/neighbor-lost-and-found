@@ -1,9 +1,16 @@
+from typing import List, Union
+
 from fastapi import APIRouter
 from starlette import status
 
 from app.api.v1.deps import ItemClaimServiceDep, CurrentUserDep
 from app.schemas.base_response import APIResponse
-from app.schemas.item_claim import ClaimCreate, ClaimResponse
+from app.schemas.item_claim import (
+    ClaimCreate,
+    ClaimResponse,
+    MyClaimResponse,
+    ClaimListResponse,
+)
 
 router = APIRouter(prefix="/items", tags=["Claims"])
 
@@ -12,7 +19,7 @@ router = APIRouter(prefix="/items", tags=["Claims"])
 # POST /items/{item_id}/claims
 # ------------------------------------------------------------------
 @router.post(
-    "/claim",
+    "/{item_id}/claim",
     response_model=APIResponse[ClaimResponse],
     status_code=status.HTTP_201_CREATED,
     summary="Submit a claim on an item",
@@ -30,20 +37,31 @@ async def create_claim(
     Validates that the item exists, is open for claims, and that the
     current user has not already submitted a claim for it. Only one
     resolved claim is allowed per item.
-
-    Args:
-        item_id (int): The ID of the item to claim (from path).
-        payload (ClaimCreate): Claim details submitted by the user.
-        service (ItemClaimServiceDep): Injected service handling claim business logic.
-        current_user (CurrentUserDep): The authenticated user making the request.
-
-    Returns:
-        APIResponse[ClaimResponse]: A success response containing the created claim.
-
-    Raises:
-        NotFoundException: 404 if the item does not exist.
-        BadRequestException: 400 if the item is not open, already resolved,
-            the user owns the item, or a duplicate claim is detected.
     """
     claim = await service.create_claim(item_id, current_user.id, payload)
     return {"success": True, "data": claim, "message": "Claim submitted successfully."}
+
+
+# ------------------------------------------------------------------
+# GET /items/{item_id}/claims — list claims for an item (owner or claimant)
+# ------------------------------------------------------------------
+@router.get(
+    "/{item_id}/claims",
+    response_model=APIResponse[Union[List[ClaimListResponse], MyClaimResponse]],
+    status_code=status.HTTP_200_OK,
+    summary="Get user's claim on an item",
+    response_description="The user's claim on an item",
+)
+async def get_claims_for_an_item(
+    item_id: int,
+    service: ItemClaimServiceDep,
+    current_user: CurrentUserDep,
+):
+    """Get claims on an item. The owner can see all the claims of an item.
+    The claimant can only see their own claim on an item."""
+    claims = await service.get_claims_for_an_item(item_id, current_user.id)
+    return {
+        "success": True,
+        "data": claims,
+        "message": "Claims retrieved successfully.",
+    }

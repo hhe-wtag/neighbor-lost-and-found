@@ -1,6 +1,8 @@
 from typing import Optional
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
+
 from app.models.item_claim import ItemClaim, ClaimStatus
 from app.repositories.base import BaseRepository
 from app.schemas.item_claim import ClaimCreate, ClaimUpdate
@@ -20,19 +22,6 @@ class ClaimRepository(BaseRepository[ItemClaim, ClaimCreate, ClaimUpdate]):
     async def create(self, schema: ClaimCreate, **kwargs) -> ItemClaim:
         """
         Persist a new claim to the database.
-
-        Combines the validated schema fields with relational IDs passed
-        as keyword arguments, flushes and commits the session, then
-        returns the fully hydrated ORM object.
-
-        Args:
-            schema (ClaimCreate): Validated claim payload from the request.
-            **kwargs:
-                item_id (int): The ID of the item being claimed.
-                claimant_user_id (int): The ID of the user submitting the claim.
-
-        Returns:
-            ItemClaim: The persisted claim fetched fresh from the database.
         """
         claim = ItemClaim(
             **schema.model_dump(mode="python"),
@@ -40,9 +29,23 @@ class ClaimRepository(BaseRepository[ItemClaim, ClaimCreate, ClaimUpdate]):
             claimant_user_id=kwargs["claimant_user_id"],
         )
         self.session.add(claim)
-        await self.session.flush()  # Assign DB-generated ID before commit
+        await self.session.flush()
         await self.session.commit()
         return await self.get_by_id(claim.id)
+
+    async def get_all_by_item(self, item_id: int) -> list[ItemClaim]:
+        """
+        Fetch all claims for an item, with claimant eagerly loaded.
+
+        Used by the service when the requesting user is the item owner
+        and needs to review all submitted claims.
+        """
+        result = await self.session.execute(
+            select(ItemClaim)
+            .options(selectinload(ItemClaim.claimant))
+            .where(ItemClaim.item_id == item_id)
+        )
+        return list(result.scalars().all())
 
     async def get_by_item_and_claimant(
         self, item_id: int, claimant_user_id: int
@@ -51,13 +54,6 @@ class ClaimRepository(BaseRepository[ItemClaim, ClaimCreate, ClaimUpdate]):
         Check whether a user has already submitted a claim for a specific item.
 
         Used by the service layer to enforce the one-claim-per-user-per-item rule.
-
-        Args:
-            item_id (int): The ID of the item to check.
-            claimant_user_id (int): The ID of the user to check against.
-
-        Returns:
-            ItemClaim | None: The existing claim if found, otherwise None.
         """
         result = await self.session.execute(
             select(ItemClaim).where(
@@ -73,12 +69,6 @@ class ClaimRepository(BaseRepository[ItemClaim, ClaimCreate, ClaimUpdate]):
 
         Used to prevent new claims from being submitted once an item
         has already been matched to a claimant.
-
-        Args:
-            item_id (int): The ID of the item to check.
-
-        Returns:
-            ItemClaim | None: The approved claim if it exists, otherwise None.
         """
         result = await self.session.execute(
             select(ItemClaim).where(
