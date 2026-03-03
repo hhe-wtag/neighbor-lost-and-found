@@ -3,15 +3,16 @@
 from typing import Generic, TypeVar, Optional
 
 from pydantic import BaseModel
-from pydantic.generics import GenericModel
 
 T = TypeVar("T")
 
 
-class APIResponse(GenericModel, Generic[T]):
+class APIResponse(BaseModel, Generic[T]):
     success: bool
     data: Optional[T] = None
     message: str
+
+    model_config = {"from_attributes": True}
 
 
 class PaginatedData(BaseModel, Generic[T]):

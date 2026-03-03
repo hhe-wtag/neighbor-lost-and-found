@@ -10,7 +10,7 @@ import {
   CarouselPrevious,
 } from '@/components/ui/carousel'
 const props = defineProps<{
-  images: { filepath: string }[]
+  images: string[]
 }>()
 const handleImageError = (event) => {
   event.target.src = placeHolderImage
@@ -25,7 +25,7 @@ const handleImageError = (event) => {
           <Card>
             <CardContent class="flex aspect-square items-center justify-center p-0">
               <img
-                :src="image?.filepath"
+                :src="images[0]"
                 class="h-full w-full object-cover rounded-sm"
                 @error="handleImageError"
               />

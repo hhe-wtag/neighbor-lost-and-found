@@ -76,5 +76,9 @@ class Item(Base):
 
     user: Mapped["User"] = relationship("User", back_populates="items")
 
+    photo: Mapped[Optional["ItemPhoto"]] = relationship(
+        "ItemPhoto", back_populates="item", uselist=False, cascade="all, delete-orphan"
+    )
+
     def __repr__(self) -> str:
         return f"<Item id={self.id} type={self.type!r} title={self.title!r} status={self.status!r}>"

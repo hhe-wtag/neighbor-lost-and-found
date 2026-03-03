@@ -22,6 +22,7 @@ const API_PATHS = {
   DELETE: (id: number) => `items/${id}`,
   MY_ITEMS: 'items/me',
   ITEM_CATEGORIES: 'items/categories',
+  ITEM_PHOTO: (id: number) => `items/${id}/photo`,
 } as const
 
 /* =========================
@@ -223,7 +224,6 @@ export const useItemStore = defineStore('item', {
     ========================= */
     async updateItem(id: number, payload: ItemUpdate) {
       return this.handleApiCall<ItemResponse>(async () => {
-        console.log(payload)
         const { data } = await axiosInstance.patch(API_PATHS.UPDATE(id), payload)
         return data
       }, 'Failed to update item').then((res) => {
@@ -249,6 +249,31 @@ export const useItemStore = defineStore('item', {
         }
         return res
       })
+    },
+
+    /* =========================
+       Upload Item Photo
+    ========================= */
+    async uploadItemPhoto(itemId: number, file: File) {
+      return this.handleApiCall(async () => {
+        const formData = new FormData()
+        formData.append('file', file)
+
+        const { data } = await axiosInstance.put(API_PATHS.ITEM_PHOTO(itemId), formData, {
+          headers: { 'Content-Type': 'multipart/form-data' },
+        })
+        return data
+      }, 'Failed to upload item photo')
+    },
+
+    /* =========================
+       Delete Item Photo
+    ========================= */
+    async deleteItemPhoto(itemId: number) {
+      return this.handleApiCall(async () => {
+        const { data } = await axiosInstance.delete(API_PATHS.ITEM_PHOTO(itemId))
+        return data
+      }, 'Failed to delete item photo')
     },
 
     /* Utilities */

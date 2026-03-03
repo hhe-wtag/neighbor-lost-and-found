@@ -14,6 +14,7 @@ export interface ItemListResponse {
   location_name: string | null
   status: ItemStatus
   created_at: string
+  photo_url: string | null
 }
 
 export interface ItemOwnerResponse {
@@ -38,6 +39,7 @@ export interface ItemResponse {
   created_at: string
   updated_at: string | null
   user: ItemOwnerResponse
+  photo_url: null
 }
 
 export interface ItemCreate {

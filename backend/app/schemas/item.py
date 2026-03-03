@@ -1,7 +1,7 @@
 from datetime import date, datetime
 from typing import Optional
-from pydantic import BaseModel, Field, field_validator
-
+from pydantic import BaseModel, Field, field_validator, computed_field
+from app.core.config import settings
 from app.models.item import ItemCategory, ItemStatus, ItemType
 
 
@@ -26,12 +26,21 @@ class ItemCreate(BaseModel):
 class ItemUpdate(BaseModel):
     title: Optional[str] = Field(None, min_length=3, max_length=255)
     description: Optional[str] = Field(None, max_length=2000)
+    type: Optional[ItemType]
     category: Optional[ItemCategory] = None
     date_occurred: Optional[date] = None
     lat: Optional[float] = Field(None, ge=-90, le=90)
     lng: Optional[float] = Field(None, ge=-180, le=180)
     location_name: Optional[str] = Field(None, max_length=255)
     status: Optional[ItemStatus] = None
+    # has_photo: bool = Field(exclude=True)
+
+    # @computed_field
+    # @property
+    # def photo_url(self) -> Optional[str]:
+    #     if self.has_photo:
+    #         return f"/items/{self.id}/photo"
+    #     return None
 
 
 class ItemOwnerResponse(BaseModel):
@@ -54,12 +63,20 @@ class ItemResponse(BaseModel):
     lng: float
     location_name: Optional[str]
     status: ItemStatus
+    user: ItemOwnerResponse
+    has_photo: Optional[bool] = Field(default=None, exclude=True)
     resolved_at: Optional[datetime]
     created_at: datetime
     updated_at: Optional[datetime]
-    user: ItemOwnerResponse
 
     model_config = {"from_attributes": True}
+
+    @computed_field
+    @property
+    def photo_url(self) -> Optional[str]:
+        if self.has_photo:
+            return f"{settings.BASE_URL}/items/{self.id}/photo"
+        return None
 
 
 class ItemListResponse(BaseModel):
@@ -72,7 +89,15 @@ class ItemListResponse(BaseModel):
     lat: float
     lng: float
     location_name: Optional[str]
+    has_photo: bool = Field(default=None, exclude=True)
     status: ItemStatus
     created_at: datetime
 
     model_config = {"from_attributes": True}
+
+    @computed_field
+    @property
+    def photo_url(self) -> Optional[str]:
+        if self.has_photo:
+            return f"{settings.BASE_URL}/items/{self.id}/photo"
+        return None

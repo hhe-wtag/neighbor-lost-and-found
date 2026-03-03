@@ -5,6 +5,17 @@
     class="relative overflow-hidden flex flex-col transition-all duration-200 hover:shadow-xl bg-card cursor-pointer"
     @click="router.push(`/items/${item.id}`)"
   >
+    <div class="p-4 w-full h-[250px]">
+      <div class="relative w-full h-full">
+        <img
+          :src="getItemPhotoUrl(item)"
+          class="w-full h-full object-cover object-center rounded-lg border"
+          alt=""
+          @error="handleImageError"
+        />
+      </div>
+    </div>
+
     <!-- Card Header -->
     <CardHeader>
       <CardTitle class="text-xl font-bold tracking-tight">
@@ -95,6 +106,7 @@ import Tooltip from '../ui/tooltip/Tooltip.vue'
 import TooltipTrigger from '../ui/tooltip/TooltipTrigger.vue'
 import TooltipContent from '../ui/tooltip/TooltipContent.vue'
 import { formatDate } from '@/utils/timeFunctions'
+import placeHolderImage from '@/assets/product-placeholder.jpg'
 
 const props = defineProps<{
   items: ItemListResponse[]
@@ -149,5 +161,15 @@ const getBadges = (item: ItemListResponse): Badge[] => {
   }
 
   return badges
+}
+
+const getItemPhotoUrl = (item: ItemListResponse) => {
+  if (!item.photo_url) return placeHolderImage
+  // Add timestamp to bust cache
+  return `${item.photo_url}?t=${new Date().getTime()}`
+}
+
+const handleImageError = (event: unknown) => {
+  event.target.src = placeHolderImage
 }
 </script>

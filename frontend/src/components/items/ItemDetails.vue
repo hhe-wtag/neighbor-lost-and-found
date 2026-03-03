@@ -20,7 +20,7 @@
     <div v-else-if="itemStore.currentItem" class="flex flex-col lg:flex-row gap-6">
       <Card class="w-full lg:w-2/3">
         <CardHeader>
-          <ItemImageCarousel :images="itemStore.currentItem.images" />
+          <ItemImageCarousel :images="[itemStore.currentItem.photo_url || '']" />
 
           <div class="flex justify-between items-start mt-4">
             <CardTitle class="text-2xl">
