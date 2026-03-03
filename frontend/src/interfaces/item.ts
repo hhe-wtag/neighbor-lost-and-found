@@ -63,3 +63,30 @@ export interface ItemUpdate {
   location_name?: string | null
   status?: ItemStatus | null
 }
+
+export interface ClaimCreate {
+  message: string
+}
+
+interface IClaimant {
+  id: number
+  email: string
+  name: string
+}
+
+export interface ClaimListResponse {
+  id: number
+  item_id: number
+  claimant: IClaimant
+  message: string
+  status: 'pending' | 'approved' | 'rejected'
+  created_at: string
+}
+
+export interface MyClaimResponse {
+  id: number
+  item_id: number
+  message: string
+  status: 'pending' | 'approved' | 'rejected'
+  created_at: string
+}
