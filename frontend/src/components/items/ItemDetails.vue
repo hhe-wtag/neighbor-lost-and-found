@@ -20,7 +20,7 @@
     <div v-else-if="itemStore.currentItem" class="flex flex-col lg:flex-row gap-6">
       <Card class="w-full lg:w-2/3">
         <CardHeader>
-          <ItemImageCarousel :images="[photoUrl]" />
+          <ItemImageCarousel :images="[itemStore.currentItem.photo_url || '']" />
 
           <div class="flex justify-between items-start mt-4">
             <CardTitle class="text-2xl">
@@ -117,8 +117,6 @@ import { ArrowLeft } from 'lucide-vue-next'
 
 import ItemImageCarousel from './ItemImageCarousel.vue'
 
-const baseUrl = import.meta.env.VITE_API_URL
-
 const router = useRouter()
 const route = useRoute()
 const itemStore = useItemStore()
@@ -136,8 +134,6 @@ onBeforeMount(async () => {
 const currentItem = computed<ItemResponse | null>(() => {
   return itemStore.currentItem
 })
-
-const photoUrl = computed<string>(() => baseUrl + '/items/' + currentItem.value?.id + '/photo')
 
 // Format date
 const formattedDate = computed<string>(() => {

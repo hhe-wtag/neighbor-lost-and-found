@@ -66,13 +66,41 @@
       </div>
     </div>
 
+    <!-- Photo Upload -->
+    <div class="space-y-2">
+      <Label>Photo</Label>
+      <Input
+        id="images"
+        type="file"
+        @change="handleFileChange"
+        accept="image/*"
+        class="cursor-pointer"
+      />
+    </div>
+
+    <!-- Image Previews -->
+    <div v-if="imagePreviewUrls.length" class="grid grid-cols-3 gap-4 mt-4">
+      <div v-for="(url, index) in imagePreviewUrls" :key="index" class="relative group">
+        <img
+          :src="url"
+          class="w-full h-18 object-cover rounded-lg"
+          :alt="`Preview ${index + 1}`"
+          @error="removeBrokenImage(index)"
+        />
+        <button
+          @click.prevent="removeImage(index)"
+          class="absolute top-[-4px] right-[-4px] h-6 w-6 rounded-full bg-destructive text-destructive-foreground opacity-0 group-hover:opacity-100 transition-opacity inline-flex items-center justify-center text-sm font-medium"
+        >
+          <span class="sr-only">Remove image</span>x
+        </button>
+      </div>
+    </div>
+
     <!-- Location Name -->
     <div class="space-y-2">
       <Label>Location Name</Label>
       <Input v-model="formData.location_name" placeholder="e.g. Dhanmondi Lake, Dhaka" />
-      <p v-if="errors.location_name" class="text-red-500 text-sm">
-        {{ errors.location_name }}
-      </p>
+      <p v-if="errors.location_name" class="text-red-500 text-sm">{{ errors.location_name }}</p>
     </div>
 
     <!-- Latitude + Longitude -->
@@ -100,14 +128,8 @@
     <div v-if="canUpdateStatus" class="space-y-2">
       <Label>Status</Label>
       <Select
-        :model-value="props.item?.status"
-        @update:model-value="
-          (v) =>
-            emit('submit', {
-              ...formData,
-              status: v as ItemStatus,
-            } as ItemUpdate)
-        "
+        :model-value="formData.status"
+        @update:model-value="(v) => (formData.status = v as ItemStatus)"
       >
         <SelectTrigger>
           <SelectValue placeholder="Select status" />
@@ -122,14 +144,12 @@
 
     <!-- Footer -->
     <DialogFooter>
-      <Button type="button" variant="outline" @click="emit('cancel')"> Cancel </Button>
-
-      <Button type="submit" :disabled="loading">
-        {{ props.item ? 'Update' : 'Create' }}
-      </Button>
+      <Button type="button" variant="outline" @click="emit('cancel')">Cancel</Button>
+      <Button type="submit" :disabled="loading">{{ isEdit ? 'Update' : 'Create' }}</Button>
     </DialogFooter>
   </form>
 </template>
+
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { Button } from '@/components/ui/button'
@@ -158,21 +178,31 @@ const itemStore = useItemStore()
 const props = defineProps<ItemFormProps>()
 
 const emit = defineEmits<{
-  (e: 'submit', data: ItemCreate | ItemUpdate): void
+  (
+    e: 'submit',
+    data: {
+      formData: ItemCreate | ItemUpdate
+      file: File | null
+      removedPhoto: boolean
+    },
+  ): void
   (e: 'cancel'): void
 }>()
 
 const loading = ref(false)
 const errors = ref<Record<string, string>>({})
+const isEdit = computed(() => !!props.item)
+
+const statusOptions = [
+  { value: 'open' as ItemStatus, label: 'Open' },
+  { value: 'resolved' as ItemStatus, label: 'Resolved' },
+]
 
 const categoryOptions = computed<string[]>(() => {
   return itemStore.itemCategories
 })
 
-/**
- * Default Create Shape
- */
-const formData = ref<ItemCreate>({
+const formData = ref<ItemCreate & { status?: ItemStatus }>({
   type: 'lost',
   title: '',
   description: '',
@@ -182,50 +212,76 @@ const formData = ref<ItemCreate>({
   location_name: '',
 })
 
-/**
- * Populate when editing
- */
-onMounted(async () => {
-  if (props.item) {
-    formData.value = {
-      type: props.item.type,
-      title: props.item.title,
-      description: props.item.description ?? '',
-      category: props.item.category,
-      lat: props.item.lat,
-      lng: props.item.lng,
-      location_name: props.item.location_name ?? '',
-    }
-  }
-})
-
-/**
- * Status Handling (Only for edit mode)
- */
-const statusOptions: { value: ItemStatus; label: string }[] = [
-  { value: 'open', label: 'Open' },
-  { value: 'resolved', label: 'Resolved' },
-]
+const selectedFile = ref<File | null>(null)
+const imagePreviewUrls = ref<string[]>([])
+const removedPhoto = ref(false)
 
 const canUpdateStatus = computed<boolean>(() => {
   return !!props.item
 })
 
-/**
- * Submit
- */
-const handleSubmit = async (): Promise<void> => {
+onMounted(() => {
+  if (!props.item) return
+
+  formData.value = {
+    ...formData.value,
+    type: props.item.type,
+    title: props.item.title,
+    description: props.item.description ?? '',
+    category: props.item.category,
+    lat: props.item.lat,
+    lng: props.item.lng,
+    location_name: props.item.location_name ?? '',
+    status: props.item.status,
+  }
+
+  if (props.item.photo_url) {
+    imagePreviewUrls.value = [props.item.photo_url]
+  }
+})
+
+const handleFileChange = (e: Event) => {
+  const input = e.target as HTMLInputElement
+  if (!input.files?.length) return
+
+  selectedFile.value = input.files[0]
+  removedPhoto.value = false
+
+  imagePreviewUrls.value = [URL.createObjectURL(selectedFile.value)]
+}
+
+const removeBrokenImage = (index: number) => {
+  imagePreviewUrls.value.splice(index, 1)
+}
+
+const removeImage = () => {
+  imagePreviewUrls.value = []
+
+  if (!selectedFile.value && props.item?.photo_url) {
+    // user removed existing backend image
+    removedPhoto.value = true
+  }
+
+  selectedFile.value = null
+}
+
+const handleSubmit = async () => {
   loading.value = true
   errors.value = {}
 
   try {
-    const result = itemValidationSchema.parse(formData.value)
-    emit('submit', result)
+    const validated = itemValidationSchema.parse(formData.value)
+
+    emit('submit', {
+      formData: validated,
+      file: selectedFile.value,
+      removedPhoto: removedPhoto.value,
+    })
   } catch (e) {
     if (e instanceof z.ZodError) {
-      e.errors.forEach((error) => {
-        if (error.path.length > 0) {
-          errors.value[String(error.path[0])] = error.message
+      e.errors.forEach((err) => {
+        if (err.path.length) {
+          errors.value[String(err.path[0])] = err.message
         }
       })
     }

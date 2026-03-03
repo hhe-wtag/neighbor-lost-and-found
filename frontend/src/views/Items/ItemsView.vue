@@ -159,7 +159,13 @@ import {
 import { Input } from '@/components/ui/input'
 import { Search } from 'lucide-vue-next'
 import ItemForm from '@/components/items/ItemForm.vue'
-import type { CreateItemData, Item, UpdateItemData } from '@/interfaces/item'
+import type {
+  CreateItemData,
+  Item,
+  ItemCreate,
+  ItemStatus,
+  UpdateItemData,
+} from '@/interfaces/item'
 import ItemCard from '@/components/items/ItemCard.vue'
 import {
   Select,
@@ -245,16 +251,30 @@ const closeForm = (): void => {
   showForm.value = false
 }
 
-const handleFormSubmit = async (formData: CreateItemData | UpdateItemData): Promise<void> => {
-  const response = selectedItem.value
-    ? await itemStore.updateItem(selectedItem.value.id, formData as UpdateItemData)
-    : await itemStore.createItem(formData as CreateItemData)
+interface ItemFormSubmit {
+  formData: ItemCreate | (ItemCreate & { status?: ItemStatus })
+  file: File | null
+  removedPhoto: boolean
+}
 
-  if (response.success) {
-    closeForm()
+const handleFormSubmit = async ({ formData, file, removedPhoto }: ItemFormSubmit) => {
+  if (!selectedItem.value) {
+    // CREATE
+    const res = await itemStore.createItem(formData as CreateItemData)
+    if (res.success && file && res.data?.id) {
+      await itemStore.uploadItemPhoto(res.data.id, file)
+    }
   } else {
-    console.error('Error during form submission:', response.message)
+    // UPDATE
+    const res = await itemStore.updateItem(selectedItem.value.id, formData as UpdateItemData)
+    if (res.success && res.data?.id) {
+      if (removedPhoto) await itemStore.deleteItemPhoto(res.data.id)
+      if (file) await itemStore.uploadItemPhoto(res.data.id, file)
+    }
   }
+
+  closeForm()
+  await fetchItems()
 }
 
 watch(currentPage, async () => {

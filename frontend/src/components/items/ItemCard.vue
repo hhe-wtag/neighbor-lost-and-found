@@ -8,7 +8,7 @@
     <div class="p-4 w-full h-[250px]">
       <div class="relative w-full h-full">
         <img
-          :src="`${baseUrl + '/items/' + item.id + '/photo'}` || placeHolderImage"
+          :src="getItemPhotoUrl(item)"
           class="w-full h-full object-cover object-center rounded-lg border"
           alt=""
           @error="handleImageError"
@@ -119,8 +119,6 @@ const emit = defineEmits<{
   (e: 'openEditForm', item: ItemListResponse): void
 }>()
 
-const baseUrl = import.meta.env.VITE_API_URL
-
 const isItemOwner = (item: ItemListResponse): boolean => {
   return item.user_id === userStore.profile?.id
 }
@@ -163,6 +161,12 @@ const getBadges = (item: ItemListResponse): Badge[] => {
   }
 
   return badges
+}
+
+const getItemPhotoUrl = (item: ItemListResponse) => {
+  if (!item.photo_url) return placeHolderImage
+  // Add timestamp to bust cache
+  return `${item.photo_url}?t=${new Date().getTime()}`
 }
 
 const handleImageError = (event: unknown) => {
