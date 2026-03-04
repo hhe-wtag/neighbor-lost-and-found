@@ -38,6 +38,25 @@
         </Badge>
       </div>
 
+      <!-- Status: bottom-left of image -->
+      <div class="absolute bottom-3 left-3">
+        <Badge
+          :class="
+            item.status === 'open'
+              ? 'bg-sky-50/90 text-sky-700 border border-sky-200 backdrop-blur-sm gap-1.5'
+              : 'bg-stone-100/90 text-stone-500 border border-stone-200 backdrop-blur-sm gap-1.5'
+          "
+        >
+          <span
+            :class="[
+              'inline-block h-1.5 w-1.5 rounded-full',
+              item.status === 'open' ? 'bg-sky-500' : 'bg-stone-400',
+            ]"
+          />
+          {{ item.status === 'open' ? 'Open' : 'Resolved' }}
+        </Badge>
+      </div>
+
       <!-- Edit button overlaid top-right (owner only) -->
       <div v-if="isItemOwner(item)" class="absolute right-3 top-3">
         <Tooltip :delay-duration="0">

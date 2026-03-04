@@ -28,6 +28,8 @@ const API_PATHS = {
 
   CREATE_CLAIM: (id: number) => `items/${id}/claim`,
   GET_CLAIMS: (id: number) => `items/${id}/claims`,
+  UPDATE_CLAIM_MESSAGE: (id: number) => `items/claims/${id}`,
+  UPDATE_CLAIM_STATUS: (id: number) => `items/claims/${id}/resolve`,
 } as const
 
 /* =========================
@@ -306,6 +308,28 @@ export const useItemStore = defineStore('item', {
           this.currentItemClaims = res.data
         }
         return res
+      })
+    },
+
+    /* =========================
+       Get All Claims for Item
+    ========================= */
+    async updateClaimMessage(claimId: number, payload: { message: string }) {
+      return this.handleApiCall<ItemResponse>(async () => {
+        const { data } = await axiosInstance.patch(API_PATHS.UPDATE_CLAIM_MESSAGE(claimId), payload)
+
+        return data
+      })
+    },
+
+    /* =========================
+       Get All Claims for Item
+    ========================= */
+    async updateClaimStatus(claimId: number, payload: { status: string }) {
+      return this.handleApiCall<ItemResponse>(async () => {
+        const { data } = await axiosInstance.patch(API_PATHS.UPDATE_CLAIM_STATUS(claimId), payload)
+
+        return data
       })
     },
 

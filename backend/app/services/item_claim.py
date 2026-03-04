@@ -112,8 +112,8 @@ class ItemClaimService:
         if item.user_id != current_user_id:
             raise ForbiddenException("Only the item owner can resolve claims")
 
-        if claim.status != ClaimStatus.PENDING:
-            raise BadRequestException("Only pending claims can be resolved")
+        # if claim.status != ClaimStatus.PENDING:
+        #     raise BadRequestException("Only pending claims can be resolved")
 
         now = datetime.now(UTC)
 
