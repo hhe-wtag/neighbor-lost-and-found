@@ -1,155 +1,255 @@
 <template>
-  <div class="container mx-auto px-6 lg:px-12">
-    <!-- Back Button -->
-    <Button variant="ghost" class="my-4" @click="router.push('/items')">
-      <ArrowLeft class="mr-2 h-4 w-4" />
-      Back to Items
-    </Button>
+  <div class="min-h-screen bg-[#f5f2ee] font-[DM_Sans]">
+    <div class="relative z-10 mx-auto max-w-5xl px-4 py-6 sm:px-8">
+      <Button
+        variant="ghost"
+        class="mb-6 gap-2 text-xs font-medium uppercase tracking-widest text-stone-500 hover:text-stone-900 transition-all hover:gap-3"
+        @click="router.push('/items')"
+      >
+        <ArrowLeft class="h-4 w-4" />
+        Back to Items
+      </Button>
 
-    <!-- Loading -->
-    <div v-if="itemStore.loading" class="flex justify-center py-8">
-      <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+      <!-- Loading -->
+      <div v-if="itemStore.loading" class="flex flex-col items-center gap-3 py-24">
+        <Loader2 class="h-8 w-8 animate-spin text-amber-700/60" />
+        <p class="text-sm text-stone-400">Fetching item details…</p>
+      </div>
+
+      <!-- Error -->
+      <Alert v-else-if="itemStore.error" variant="destructive" class="mb-6">
+        <AlertCircle class="h-4 w-4" />
+        <AlertDescription>{{ itemStore.error }}</AlertDescription>
+      </Alert>
+
+      <!-- Item Details -->
+      <div
+        v-else-if="itemStore.currentItem"
+        class="flex animate-in fade-in slide-in-from-bottom-4 duration-500 flex-col gap-6 lg:flex-row lg:items-start"
+      >
+        <!-- LEFT: Image + Map -->
+        <div class="flex flex-col gap-4 lg:w-[44%]">
+          <Card class="overflow-hidden border-0 bg-stone-100 shadow-md">
+            <div class="relative">
+              <ItemImageCarousel :images="[itemStore.currentItem.photo_url || '']" />
+              <Badge
+                :class="[
+                  'absolute left-3 top-3 backdrop-blur-sm border',
+                  itemStore.currentItem.type === 'lost'
+                    ? 'bg-red-50/80 text-red-600 border-red-200'
+                    : 'bg-emerald-50/80 text-emerald-700 border-emerald-200',
+                ]"
+              >
+                {{ itemStore.currentItem.type.toUpperCase() }}
+              </Badge>
+            </div>
+          </Card>
+
+          <Card
+            v-if="itemStore.currentItem.lat && itemStore.currentItem.lng"
+            class="overflow-hidden border-0 bg-stone-100 shadow-sm"
+          >
+            <CardHeader class="pb-2 pt-4 px-4">
+              <p class="text-[0.68rem] font-medium uppercase tracking-widest text-stone-400">
+                Location on Map
+              </p>
+            </CardHeader>
+            <CardContent class="p-0">
+              <ItemMap
+                :lat="itemStore.currentItem.lat"
+                :lng="itemStore.currentItem.lng"
+                :location-name="itemStore.currentItem.location_name"
+                :description="itemStore.currentItem.description"
+              />
+            </CardContent>
+          </Card>
+        </div>
+
+        <!-- RIGHT: Info Panel -->
+        <Card class="flex-1 border-0 bg-[#fffcf9] shadow-lg">
+          <CardHeader class="pb-2">
+            <div class="flex items-start justify-between gap-4">
+              <CardTitle
+                class="font-['Playfair_Display'] text-2xl font-bold leading-snug text-stone-900 sm:text-3xl"
+              >
+                {{ itemStore.currentItem.title }}
+              </CardTitle>
+              <Badge
+                :class="[
+                  'mt-1 shrink-0 gap-1.5',
+                  itemStore.currentItem.status === 'open'
+                    ? 'bg-sky-50 text-sky-700 border border-sky-200'
+                    : 'bg-stone-100 text-stone-500 border border-stone-200',
+                ]"
+              >
+                <span
+                  :class="[
+                    'inline-block h-1.5 w-1.5 rounded-full',
+                    itemStore.currentItem.status === 'open' ? 'bg-sky-500' : 'bg-stone-400',
+                  ]"
+                />
+                {{ itemStore.currentItem.status.toUpperCase() }}
+              </Badge>
+            </div>
+            <CardDescription class="mt-3 text-sm leading-relaxed text-stone-500">
+              {{ itemStore.currentItem.description }}
+            </CardDescription>
+          </CardHeader>
+
+          <CardContent class="space-y-6">
+            <Separator class="bg-gradient-to-r from-stone-200 to-transparent" />
+
+            <!-- Meta Grid -->
+            <div class="grid grid-cols-2 gap-x-6 gap-y-5">
+              <div class="flex flex-col gap-1">
+                <span class="text-[0.68rem] font-medium uppercase tracking-widest text-stone-400"
+                  >Category</span
+                >
+                <span class="text-sm capitalize text-stone-800">{{
+                  itemStore.currentItem.category
+                }}</span>
+              </div>
+              <div class="flex flex-col gap-1">
+                <span class="text-[0.68rem] font-medium uppercase tracking-widest text-stone-400"
+                  >Location</span
+                >
+                <span class="text-sm text-stone-800">{{
+                  itemStore.currentItem.location_name
+                }}</span>
+              </div>
+              <div class="flex flex-col gap-1">
+                <span class="text-[0.68rem] font-medium uppercase tracking-widest text-stone-400"
+                  >Coordinates</span
+                >
+                <span class="font-mono text-xs text-stone-500"
+                  >{{ itemStore.currentItem.lat }}, {{ itemStore.currentItem.lng }}</span
+                >
+              </div>
+              <div class="flex flex-col gap-1">
+                <span class="text-[0.68rem] font-medium uppercase tracking-widest text-stone-400"
+                  >Posted On</span
+                >
+                <span class="text-sm text-stone-800">{{ formattedDate }}</span>
+              </div>
+            </div>
+
+            <Separator class="bg-gradient-to-r from-stone-200 to-transparent" />
+
+            <!-- Owner: edit + claims list -->
+            <template v-if="isOwner">
+              <div class="flex flex-wrap gap-3">
+                <Button
+                  class="flex-1 bg-stone-900 text-stone-50 hover:bg-stone-800 active:scale-[0.98] transition-all"
+                  @click="emit('openEditForm', itemStore.currentItem)"
+                >
+                  <Pencil class="mr-2 h-4 w-4" /> Edit Item
+                </Button>
+                <Button
+                  variant="outline"
+                  class="border-stone-300 text-stone-500 hover:text-stone-900 hover:border-stone-400 transition-all"
+                >
+                  <Share2 class="mr-2 h-4 w-4" /> Share
+                </Button>
+              </div>
+
+              <Separator class="bg-gradient-to-r from-stone-200 to-transparent" />
+              <ItemClaimsList v-if="ownerClaims !== null" :claims="ownerClaims" />
+            </template>
+
+            <!-- Non-owner + resolved -->
+            <template v-else-if="itemStore.currentItem.status !== 'open'">
+              <Button disabled class="w-full bg-stone-100 text-stone-400 cursor-not-allowed">
+                <CheckCircle2 class="mr-2 h-4 w-4" /> Item Resolved
+              </Button>
+            </template>
+
+            <!-- Non-owner + open: claim flow -->
+            <template v-else>
+              <ItemMyClaim v-if="myClaim" :claim="myClaim" />
+              <ItemClaimForm v-else :item-id="itemStore.currentItem.id" />
+            </template>
+          </CardContent>
+        </Card>
+      </div>
+
+      <!-- Not Found -->
+      <Alert v-else variant="destructive" class="mb-6">
+        <AlertCircle class="h-4 w-4" />
+        <AlertDescription>Item not found.</AlertDescription>
+      </Alert>
     </div>
-
-    <!-- Error -->
-    <Alert v-else-if="itemStore.error" variant="destructive" class="mb-6">
-      <AlertDescription>{{ itemStore.error }}</AlertDescription>
-    </Alert>
-
-    <!-- Item Details -->
-    <div v-else-if="itemStore.currentItem" class="flex flex-col lg:flex-row gap-6">
-      <Card class="w-full lg:w-2/3">
-        <CardHeader>
-          <ItemImageCarousel :images="[itemStore.currentItem.photo_url || '']" />
-
-          <div class="flex justify-between items-start mt-4">
-            <CardTitle class="text-2xl">
-              {{ itemStore.currentItem.title }}
-            </CardTitle>
-
-            <!-- Type Badge -->
-            <span
-              :class="[
-                'px-3 py-1 rounded-full text-sm font-medium',
-                itemStore.currentItem.type === 'lost'
-                  ? 'bg-red-100 text-red-600'
-                  : 'bg-green-100 text-green-600',
-              ]"
-            >
-              {{ itemStore.currentItem.type.toUpperCase() }}
-            </span>
-          </div>
-
-          <CardDescription class="text-base mt-2">
-            {{ itemStore.currentItem.description }}
-          </CardDescription>
-        </CardHeader>
-
-        <CardContent class="space-y-4 mt-4">
-          <!-- Category -->
-          <div class="flex justify-between">
-            <span class="text-muted-foreground">Category</span>
-            <span class="font-medium capitalize">
-              {{ itemStore.currentItem.category }}
-            </span>
-          </div>
-
-          <!-- Location -->
-          <div class="flex justify-between">
-            <span class="text-muted-foreground">Location</span>
-            <span class="font-medium">
-              {{ itemStore.currentItem.location_name }}
-            </span>
-          </div>
-
-          <!-- Coordinates -->
-          <div class="flex justify-between">
-            <span class="text-muted-foreground">Coordinates</span>
-            <span class="font-medium">
-              {{ itemStore.currentItem.lat }},
-              {{ itemStore.currentItem.lng }}
-            </span>
-          </div>
-
-          <!-- Status -->
-          <div class="flex justify-between items-center">
-            <span class="text-muted-foreground">Status</span>
-            <span
-              :class="[
-                'px-3 py-1 rounded-full text-sm font-medium',
-                itemStore.currentItem.status === 'open'
-                  ? 'bg-blue-100 text-blue-600'
-                  : 'bg-gray-200 text-gray-700',
-              ]"
-            >
-              {{ itemStore.currentItem.status.toUpperCase() }}
-            </span>
-          </div>
-
-          <!-- Created At -->
-          <div class="flex justify-between">
-            <span class="text-muted-foreground">Posted On</span>
-            <span class="font-medium">
-              {{ formattedDate }}
-            </span>
-          </div>
-        </CardContent>
-      </Card>
-    </div>
-
-    <!-- Not Found -->
-    <Alert v-else variant="destructive" class="mb-6">
-      <AlertDescription>Item not found</AlertDescription>
-    </Alert>
   </div>
 </template>
-<script setup lang="ts">
-import { computed, onBeforeMount, onMounted } from 'vue'
-import { useRouter, useRoute } from 'vue-router'
 
+<script setup lang="ts">
+import { computed, onBeforeMount } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
 import { useItemStore } from '@/stores/item'
-import type { ItemResponse } from '@/interfaces/item'
+import { useUserStore } from '@/stores/user'
+import type { ItemResponse, ClaimListResponse, MyClaimResponse } from '@/interfaces/item'
 
 import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { ArrowLeft } from 'lucide-vue-next'
+import { Separator } from '@/components/ui/separator'
+import { ArrowLeft, AlertCircle, Loader2, Pencil, Share2, CheckCircle2 } from 'lucide-vue-next'
 
 import ItemImageCarousel from './ItemImageCarousel.vue'
+import ItemMap from './ItemMap.vue'
+import ItemClaimForm from './ItemClaimForm.vue'
+import ItemMyClaim from './ItemMyClaim.vue'
+import ItemClaimsList from './ItemClaimsList.vue'
 
 const router = useRouter()
 const route = useRoute()
 const itemStore = useItemStore()
+const userStore = useUserStore()
 
-// Fetch item on mount
+const emit = defineEmits<{
+  (e: 'openEditForm', item: ItemResponse): void
+}>()
+
 onBeforeMount(async () => {
   const id = route.params.id as string
-  console.log(id)
-  if (id) {
-    await itemStore.fetchItemById(Number(id))
+  if (!id) {
+    return
   }
+
+  await itemStore.fetchItemById(Number(id))
+  await itemStore.fetchClaims(Number(id))
 })
 
-// Typed computed
-const currentItem = computed<ItemResponse | null>(() => {
-  return itemStore.currentItem
-})
+const currentItem = computed<ItemResponse | null>(() => itemStore.currentItem)
 
-// Format date
+const isOwner = computed(
+  () => !!userStore.profile && currentItem.value?.user_id === userStore.profile.id,
+)
+
+const ownerClaims = computed<ClaimListResponse[] | null>(() =>
+  isOwner.value && Array.isArray(itemStore.currentItemClaims)
+    ? (itemStore.currentItemClaims as ClaimListResponse[])
+    : null,
+)
+
+const myClaim = computed<MyClaimResponse | null>(() =>
+  !isOwner.value && !Array.isArray(itemStore.currentItemClaims) && itemStore.currentItemClaims
+    ? (itemStore.currentItemClaims as MyClaimResponse)
+    : null,
+)
+
 const formattedDate = computed<string>(() => {
   if (!currentItem.value?.created_at) return ''
-  return new Date(currentItem.value.created_at).toLocaleString()
+  return new Date(currentItem.value.created_at).toLocaleString('en-US', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
 })
 </script>
 
 <style>
-.fade-enter-active,
-.fade-leave-active {
-  transition: opacity 0.3s ease;
-}
-
-.fade-enter-from,
-.fade-leave-to {
-  opacity: 0;
-}
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=DM+Sans:wght@300;400;500&display=swap');
 </style>

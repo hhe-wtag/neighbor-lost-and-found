@@ -2,84 +2,117 @@
   <Card
     v-for="item in props.items"
     :key="item.id"
-    class="relative overflow-hidden flex flex-col transition-all duration-200 hover:shadow-xl bg-card cursor-pointer"
+    class="group relative flex flex-col overflow-hidden border-0 bg-[#fffcf9] shadow-sm hover:shadow-lg transition-all duration-300 cursor-pointer active:scale-[0.98]"
     @click="router.push(`/items/${item.id}`)"
   >
-    <div class="p-4 w-full h-[250px]">
-      <div class="relative w-full h-full">
-        <img
-          :src="getItemPhotoUrl(item)"
-          class="w-full h-full object-cover object-center rounded-lg border"
-          alt=""
-          @error="handleImageError"
-        />
+    <!-- Image -->
+    <div class="relative h-52 w-full overflow-hidden bg-stone-100">
+      <img
+        :src="getItemPhotoUrl(item)"
+        class="h-full w-full object-cover object-center transition-transform duration-500 group-hover:scale-105"
+        alt=""
+        @error="handleImageError"
+      />
+      <!-- Badges overlaid on image -->
+      <div class="absolute left-3 top-3 flex flex-wrap gap-1.5">
+        <Badge
+          :class="
+            item.type === 'lost'
+              ? 'bg-red-50/90 text-red-600 border border-red-200 backdrop-blur-sm'
+              : 'bg-emerald-50/90 text-emerald-700 border border-emerald-200 backdrop-blur-sm'
+          "
+        >
+          {{ item.type === 'lost' ? 'Lost' : 'Found' }}
+        </Badge>
+        <Badge
+          v-if="item.status === 'resolved'"
+          class="bg-stone-100/90 text-stone-500 border border-stone-200 backdrop-blur-sm"
+        >
+          Resolved
+        </Badge>
+        <Badge
+          v-if="isNew(item)"
+          class="bg-sky-50/90 text-sky-600 border border-sky-200 backdrop-blur-sm"
+        >
+          New
+        </Badge>
+      </div>
+
+      <!-- Status: bottom-left of image -->
+      <div class="absolute bottom-3 left-3">
+        <Badge
+          :class="
+            item.status === 'open'
+              ? 'bg-sky-50/90 text-sky-700 border border-sky-200 backdrop-blur-sm gap-1.5'
+              : 'bg-stone-100/90 text-stone-500 border border-stone-200 backdrop-blur-sm gap-1.5'
+          "
+        >
+          <span
+            :class="[
+              'inline-block h-1.5 w-1.5 rounded-full',
+              item.status === 'open' ? 'bg-sky-500' : 'bg-stone-400',
+            ]"
+          />
+          {{ item.status === 'open' ? 'Open' : 'Resolved' }}
+        </Badge>
+      </div>
+
+      <!-- Edit button overlaid top-right (owner only) -->
+      <div v-if="isItemOwner(item)" class="absolute right-3 top-3">
+        <Tooltip :delay-duration="0">
+          <TooltipTrigger as-child>
+            <Button
+              variant="secondary"
+              size="icon"
+              class="h-8 w-8 bg-white/80 backdrop-blur-sm border border-stone-200 text-stone-600 hover:bg-white hover:text-stone-900 shadow-sm transition-all"
+              @click="handleEdit($event, item)"
+            >
+              <Pencil class="h-3.5 w-3.5" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent side="bottom">Edit listing</TooltipContent>
+        </Tooltip>
       </div>
     </div>
 
-    <!-- Card Header -->
-    <CardHeader>
-      <CardTitle class="text-xl font-bold tracking-tight">
+    <!-- Body -->
+    <CardHeader class="pb-2 pt-4">
+      <CardTitle
+        class="font-['Playfair_Display'] text-base font-bold leading-snug text-stone-900 line-clamp-1"
+      >
         {{ item.title }}
       </CardTitle>
-
-      <!-- Badges -->
-      <div class="flex flex-wrap gap-2">
-        <div
-          v-for="badge in getBadges(item)"
-          :key="badge.text"
-          class="w-fit px-3 py-1 rounded-full text-xs font-medium"
-          :class="badge.style"
-        >
-          {{ badge.text }}
-        </div>
-      </div>
-
-      <CardDescription class="line-clamp-2 mt-2">
+      <CardDescription class="line-clamp-2 text-xs leading-relaxed text-stone-400">
         {{ item.description || 'No description provided.' }}
       </CardDescription>
     </CardHeader>
 
-    <!-- Card Content -->
-    <CardContent>
-      <div class="space-y-2 text-sm">
-        <div>
-          <p class="text-xs text-muted-foreground">Category</p>
-          <p class="font-medium capitalize">{{ item.category }}</p>
+    <CardContent class="flex-1 pb-3">
+      <div class="space-y-2">
+        <div class="flex items-center justify-between">
+          <span class="text-[0.65rem] uppercase tracking-widest text-stone-400">Category</span>
+          <span class="text-xs font-medium capitalize text-stone-700">{{ item.category }}</span>
         </div>
-
-        <div>
-          <p class="text-xs text-muted-foreground">Location</p>
-          <p class="font-medium">
-            {{ item.location_name || 'Location not specified' }}
-          </p>
+        <Separator class="bg-stone-100" />
+        <div class="flex items-center justify-between">
+          <span class="text-[0.65rem] uppercase tracking-widest text-stone-400">Location</span>
+          <span class="text-xs font-medium text-stone-700 text-right max-w-[60%] truncate">
+            {{ item.location_name || 'Not specified' }}
+          </span>
         </div>
-
-        <div>
-          <p class="text-xs text-muted-foreground">Posted On</p>
-          <p class="font-medium">
-            {{ formatDate(item.created_at) }}
-          </p>
+        <Separator class="bg-stone-100" />
+        <div class="flex items-center justify-between">
+          <span class="text-[0.65rem] uppercase tracking-widest text-stone-400">Posted</span>
+          <span class="text-xs font-medium text-stone-700">{{ formatDate(item.created_at) }}</span>
         </div>
       </div>
     </CardContent>
 
-    <!-- Card Footer -->
-    <CardFooter class="flex" :class="isItemOwner(item) ? 'justify-between' : 'justify-end'">
-      <!-- Edit Button -->
-      <Tooltip v-if="isItemOwner(item)" :delay-duration="0">
-        <TooltipTrigger>
-          <Button variant="outline" size="sm" @click="handleEdit($event, item)">
-            <Edit class="w-4 h-4 mr-1" />
-            Edit
-          </Button>
-        </TooltipTrigger>
-        <TooltipContent :side="'bottom'"> Update your listing </TooltipContent>
-      </Tooltip>
-
+    <!-- Footer -->
+    <CardFooter class="pt-0 pb-4">
       <Button
-        variant="secondary"
+        class="w-full bg-stone-900 text-stone-50 text-xs hover:bg-stone-800 active:scale-[0.98] transition-all"
         size="sm"
-        class="hover:bg-primary hover:text-primary-foreground transition-colors"
         @click.stop="router.push(`/items/${item.id}`)"
       >
         View Details
@@ -91,6 +124,7 @@
 <script setup lang="ts">
 import type { ItemListResponse } from '@/interfaces/item'
 import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
 import {
   Card,
   CardContent,
@@ -99,77 +133,34 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
+import { Separator } from '@/components/ui/separator'
+import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
-import { Edit } from 'lucide-vue-next'
-import Tooltip from '../ui/tooltip/Tooltip.vue'
-import TooltipTrigger from '../ui/tooltip/TooltipTrigger.vue'
-import TooltipContent from '../ui/tooltip/TooltipContent.vue'
+import { Pencil } from 'lucide-vue-next'
 import { formatDate } from '@/utils/timeFunctions'
 import placeHolderImage from '@/assets/product-placeholder.jpg'
 
-const props = defineProps<{
-  items: ItemListResponse[]
-}>()
+const props = defineProps<{ items: ItemListResponse[] }>()
+const emit = defineEmits<{ (e: 'openEditForm', item: ItemListResponse): void }>()
 
 const router = useRouter()
 const userStore = useUserStore()
 
-const emit = defineEmits<{
-  (e: 'openEditForm', item: ItemListResponse): void
-}>()
+const isItemOwner = (item: ItemListResponse) => item.user_id === userStore.profile?.id
 
-const isItemOwner = (item: ItemListResponse): boolean => {
-  return item.user_id === userStore.profile?.id
-}
+const isNew = (item: ItemListResponse) =>
+  new Date(item.created_at) > new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
 
-const handleEdit = (event: MouseEvent, item: ItemListResponse): void => {
+const handleEdit = (event: MouseEvent, item: ItemListResponse) => {
   event.stopPropagation()
   emit('openEditForm', item)
 }
 
-interface Badge {
-  text: string
-  style: string
-}
+const getItemPhotoUrl = (item: ItemListResponse) =>
+  item.photo_url ? `${item.photo_url}?t=${Date.now()}` : placeHolderImage
 
-const getBadges = (item: ItemListResponse): Badge[] => {
-  const badges: Badge[] = []
-  const now = new Date()
-  const sevenDaysMs = 7 * 24 * 60 * 60 * 1000
-
-  // Type badge
-  badges.push({
-    text: item.type === 'lost' ? 'Lost' : 'Found',
-    style: item.type === 'lost' ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800',
-  })
-
-  // Status badge
-  if (item.status === 'resolved') {
-    badges.push({
-      text: 'Resolved',
-      style: 'bg-gray-200 text-gray-800',
-    })
-  }
-
-  // New badge
-  if (new Date(item.created_at) > new Date(now.getTime() - sevenDaysMs)) {
-    badges.push({
-      text: 'New',
-      style: 'bg-blue-100 text-blue-800',
-    })
-  }
-
-  return badges
-}
-
-const getItemPhotoUrl = (item: ItemListResponse) => {
-  if (!item.photo_url) return placeHolderImage
-  // Add timestamp to bust cache
-  return `${item.photo_url}?t=${new Date().getTime()}`
-}
-
-const handleImageError = (event: unknown) => {
-  event.target.src = placeHolderImage
+const handleImageError = (event: Event) => {
+  ;(event.target as HTMLImageElement).src = placeHolderImage
 }
 </script>

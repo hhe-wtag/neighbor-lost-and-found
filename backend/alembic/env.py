@@ -13,6 +13,7 @@ from app.models.user import User  # noqa: F401
 from app.models.session import Session  # noqa: F401
 from app.models.item import Item  # noqa: F401
 from app.models.item_photo import ItemPhoto  # noqa: F401
+from app.models.item_claim import ItemClaim  # noqa: F401
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.

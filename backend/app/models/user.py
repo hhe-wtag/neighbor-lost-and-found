@@ -37,6 +37,9 @@ class User(Base):
     items: Mapped[list["Item"]] = relationship(
         "Item", back_populates="user", cascade="all, delete-orphan"
     )
+    claims: Mapped[list["ItemClaim"]] = relationship(
+        "ItemClaim", back_populates="claimant", cascade="all, delete-orphan"
+    )
 
     def __repr__(self) -> str:
         return f"<User id={self.id} email={self.email!r} role={self.role!r}>"

@@ -1,13 +1,5 @@
 import { defineStore } from 'pinia'
-import type {
-  ItemResponse,
-  ItemListResponse,
-  ItemCreate,
-  ItemUpdate,
-  ItemType,
-  ItemStatus,
-  ClaimCreate,
-} from '@/interfaces/item'
+
 import axiosInstance from '@/plugins/axios'
 import { useErrorHandler } from '@/composables/useErrorHandler'
 
@@ -15,21 +7,8 @@ import { useErrorHandler } from '@/composables/useErrorHandler'
    API PATHS (FastAPI Spec)
 ========================= */
 const API_PATHS = {
-  ALL: 'items/',
-  SINGLE: (id: number) => `items/${id}`,
-  CREATE: 'items/',
-  UPDATE: (id: number) => `items/${id}`,
-  DELETE: (id: number) => `items/${id}`,
-  MY_ITEMS: 'items/me',
-
-  ITEM_CATEGORIES: 'items/categories',
-
-  ITEM_PHOTO: (id: number) => `items/${id}/photo`,
-
-  CREATE_CLAIM: (id: number) => `items/${id}/claim`,
-  GET_CLAIMS: (id: number) => `items/${id}/claims`,
-  UPDATE_CLAIM_MESSAGE: (id: number) => `items/claims/${id}`,
-  UPDATE_CLAIM_STATUS: (id: number) => `items/claims/${id}/resolve`,
+  CREATE: (id: number) => `items/${id}/claim`,
+  GET: (id: number) => `items/${id}/claims`,
 } as const
 
 /* =========================
@@ -42,7 +21,6 @@ interface ItemStoreState {
   limit: number
   itemCategories: string[]
   currentItem: ItemResponse | null
-  currentItemClaims: any
   loading: boolean
   error: string | null
   currentPage: number
@@ -60,7 +38,6 @@ export const useItemStore = defineStore('item', {
     hasNext: false,
     hasPrev: false,
     currentItem: null,
-    currentItemClaims: null,
     itemCategories: [],
     loading: false,
     error: null,
@@ -96,7 +73,7 @@ export const useItemStore = defineStore('item', {
     /* Generic API handler for APIResponse<T> */
     async handleApiCall<T>(
       apiCall: () => Promise<{ success: boolean; data: T; message: any }>,
-      fallbackError: string = 'Something Went Wrong, Please Try Again.',
+      fallbackError: string,
     ): Promise<{
       success: boolean
       message: string
@@ -283,54 +260,6 @@ export const useItemStore = defineStore('item', {
         const { data } = await axiosInstance.delete(API_PATHS.ITEM_PHOTO(itemId))
         return data
       }, 'Failed to delete item photo')
-    },
-
-    /* =========================
-       Create Claim for An Item
-    ========================= */
-    async submitClaim(itemId: number, payload: ClaimCreate) {
-      return this.handleApiCall<ItemResponse>(async () => {
-        const { data } = await axiosInstance.post(API_PATHS.CREATE_CLAIM(itemId), payload)
-        return data
-      })
-    },
-
-    /* =========================
-       Get All Claims for Item
-    ========================= */
-    async fetchClaims(itemId: number) {
-      return this.handleApiCall<ItemResponse>(async () => {
-        const { data } = await axiosInstance.get(API_PATHS.GET_CLAIMS(itemId))
-
-        return data
-      }, 'Failed to fetch claims').then((res) => {
-        if (res.success && res.data !== undefined) {
-          this.currentItemClaims = res.data
-        }
-        return res
-      })
-    },
-
-    /* =========================
-       Get All Claims for Item
-    ========================= */
-    async updateClaimMessage(claimId: number, payload: { message: string }) {
-      return this.handleApiCall<ItemResponse>(async () => {
-        const { data } = await axiosInstance.patch(API_PATHS.UPDATE_CLAIM_MESSAGE(claimId), payload)
-
-        return data
-      })
-    },
-
-    /* =========================
-       Get All Claims for Item
-    ========================= */
-    async updateClaimStatus(claimId: number, payload: { status: string }) {
-      return this.handleApiCall<ItemResponse>(async () => {
-        const { data } = await axiosInstance.patch(API_PATHS.UPDATE_CLAIM_STATUS(claimId), payload)
-
-        return data
-      })
     },
 
     /* Utilities */

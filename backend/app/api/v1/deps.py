@@ -10,8 +10,10 @@ from app.models.user import User
 from app.repositories.item import ItemRepository
 from app.repositories.session import SessionRepository
 from app.repositories.user import UserRepository
+from app.repositories.item_claim import ClaimRepository
 from app.services.auth import AuthService
 from app.services.item import ItemService
+from app.services.item_claim import ItemClaimService
 
 cookie_scheme = APIKeyCookie(name="session_token", auto_error=False)
 
@@ -44,6 +46,16 @@ def get_item_service(session: AsyncSession = Depends(get_db)) -> ItemService:
 
 
 ItemServiceDep = Annotated[ItemService, Depends(get_item_service)]
+
+
+def get_item_claim_service(session: AsyncSession = Depends(get_db)) -> ItemClaimService:
+    return ItemClaimService(
+        claim_repo=ClaimRepository(session),
+        item_repo=ItemRepository(session),
+    )
+
+
+ItemClaimServiceDep = Annotated[ItemClaimService, Depends(get_item_claim_service)]
 
 
 # =========================

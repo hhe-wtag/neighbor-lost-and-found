@@ -1,138 +1,208 @@
 <template>
-  <div class="container space-y-6 py-6">
-    <!-- Header and Search -->
-    <div class="flex justify-between items-center">
-      <h1 class="text-2xl font-bold">Items</h1>
-      <div class="flex gap-4">
-        <div class="relative w-64">
-          <Input v-model="searchQuery" placeholder="Search items..." class="pl-8" type="search" />
-          <Search class="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+  <div class="mx-auto max-w-7xl px-4 py-8 sm:px-8 font-[DM_Sans]">
+    <!-- Header -->
+    <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-8">
+      <div>
+        <h1 class="font-['Playfair_Display'] text-3xl font-bold text-stone-900">Items</h1>
+        <p class="mt-1 text-sm text-stone-400">Browse lost & found reports</p>
+      </div>
+      <div class="flex items-center gap-3">
+        <div class="relative">
+          <Search class="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-stone-400" />
+          <Input
+            v-model="searchQuery"
+            placeholder="Search items..."
+            type="search"
+            class="pl-9 w-56 bg-white/70 border-stone-200 placeholder:text-stone-400 focus-visible:ring-stone-300"
+          />
         </div>
-        <Button @click="openCreateForm">Add Item</Button>
+        <Button
+          class="bg-stone-900 text-stone-50 hover:bg-stone-800 active:scale-[0.98] transition-all"
+          @click="openCreateForm"
+        >
+          <Plus class="mr-2 h-4 w-4" /> Add Item
+        </Button>
       </div>
     </div>
 
     <!-- Filters -->
-    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 bg-muted/40 p-4 rounded-xl">
-      <!-- Type Filter -->
-      <div class="space-y-2">
-        <Label>Type</Label>
-        <Select :model-value="filters.type" @update:model-value="(v) => (filters.type = v)">
-          <SelectTrigger>
-            <SelectValue placeholder="All Types" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="lost">Lost</SelectItem>
-            <SelectItem value="found">Found</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
+    <Card class="mb-8 border-0 bg-white/60 shadow-sm backdrop-blur-sm">
+      <CardContent class="flex flex-col gap-4 p-5 sm:flex-row sm:items-end">
+        <div class="flex-1 space-y-1.5">
+          <Label class="text-[0.68rem] uppercase tracking-widest text-stone-400">Type</Label>
+          <Select :model-value="filters.type" @update:model-value="(v) => (filters.type = v)">
+            <SelectTrigger class="border-stone-200 bg-white">
+              <SelectValue placeholder="All Types" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="lost">Lost</SelectItem>
+              <SelectItem value="found">Found</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
 
-      <!-- Category Filter -->
-      <div class="space-y-2">
-        <Label>Category</Label>
-        <Select :model-value="filters.category" @update:model-value="(v) => (filters.category = v)">
-          <SelectTrigger>
-            <SelectValue placeholder="All Categories" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem
-              v-for="category in itemStore.itemCategories"
-              :key="category"
-              :value="category"
-            >
-              {{ category }}
-            </SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
+        <div class="flex-1 space-y-1.5">
+          <Label class="text-[0.68rem] uppercase tracking-widest text-stone-400">Category</Label>
+          <Select
+            :model-value="filters.category"
+            @update:model-value="(v) => (filters.category = v)"
+          >
+            <SelectTrigger class="border-stone-200 bg-white">
+              <SelectValue placeholder="All Categories" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem
+                v-for="category in itemStore.itemCategories"
+                :key="category"
+                :value="category"
+              >
+                {{ category }}
+              </SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
 
-      <!-- Status Filter -->
-      <div class="space-y-2">
-        <Label>Status</Label>
-        <Select :model-value="filters.status" @update:model-value="(v) => (filters.status = v)">
-          <SelectTrigger>
-            <SelectValue placeholder="All Status" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="open">Open</SelectItem>
-            <SelectItem value="resolved">Resolved</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
+        <div class="flex-1 space-y-1.5">
+          <Label class="text-[0.68rem] uppercase tracking-widest text-stone-400">Status</Label>
+          <Select :model-value="filters.status" @update:model-value="(v) => (filters.status = v)">
+            <SelectTrigger class="border-stone-200 bg-white">
+              <SelectValue placeholder="All Status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="open">Open</SelectItem>
+              <SelectItem value="resolved">Resolved</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
 
-      <!-- Actions -->
-      <div class="flex items-end gap-2">
-        <Button class="w-full" @click="applyFilters"> Apply </Button>
-        <Button variant="outline" class="w-full" @click="clearFilters"> Clear </Button>
-      </div>
+        <div class="flex gap-2 sm:w-48">
+          <Button
+            class="flex-1 bg-stone-900 text-stone-50 hover:bg-stone-800 active:scale-[0.98] transition-all"
+            @click="applyFilters"
+          >
+            Apply
+          </Button>
+          <Button
+            variant="outline"
+            class="flex-1 border-stone-200 text-stone-500 hover:text-stone-900 hover:border-stone-400 transition-all"
+            @click="clearFilters"
+          >
+            Clear
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+
+    <!-- Loading -->
+    <div v-if="itemStore.loading" class="flex flex-col items-center gap-3 py-24">
+      <Loader2 class="h-8 w-8 animate-spin text-amber-700/60" />
+      <p class="text-sm text-stone-400">Loading items…</p>
     </div>
 
-    <!-- Loading State -->
-    <div v-if="itemStore.loading" class="flex justify-center py-8">
-      <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
-    </div>
-
-    <!-- Error State -->
-    <Alert v-if="itemStore.error" variant="destructive">
+    <!-- Error -->
+    <Alert v-else-if="itemStore.error" variant="destructive" class="mb-6">
+      <AlertCircle class="h-4 w-4" />
       <AlertTitle>Error</AlertTitle>
       <AlertDescription>{{ itemStore.error }}</AlertDescription>
     </Alert>
 
     <!-- Empty State -->
-    <div v-else-if="itemStore.items.length === 0" class="text-center py-8 text-muted-foreground">
-      {{ searchQuery ? 'No items match your search' : 'No items available' }}
+    <div
+      v-else-if="itemStore.items.length === 0"
+      class="flex flex-col items-center gap-3 py-24 text-stone-400"
+    >
+      <PackageSearch class="h-12 w-12 text-stone-300" />
+      <p class="text-sm">{{ searchQuery ? 'No items match your search' : 'No items available' }}</p>
     </div>
 
-    <!-- Grid Layout -->
-    <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+    <!-- Grid -->
+    <div
+      v-else
+      class="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 animate-in fade-in duration-500"
+    >
       <ItemCard :items="itemStore.items" @openEditForm="(item) => openEditForm(item)" />
+    </div>
+
+    <!-- Pagination -->
+    <div v-if="totalPages > 1" class="mt-10 flex justify-center">
+      <Pagination :current-page="currentPage" :total-pages="totalPages">
+        <div class="flex items-center gap-1">
+          <Button
+            variant="ghost"
+            size="icon"
+            class="h-8 w-8 text-stone-400 hover:text-stone-900"
+            :disabled="currentPage === 1"
+            @click="goToPage(1)"
+          >
+            <ChevronsLeft class="h-4 w-4" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            class="h-8 w-8 text-stone-400 hover:text-stone-900"
+            :disabled="currentPage === 1"
+            @click="goToPage(currentPage - 1)"
+          >
+            <ChevronLeft class="h-4 w-4" />
+          </Button>
+
+          <template v-for="n in visiblePages" :key="n">
+            <Button
+              :variant="n === currentPage ? 'default' : 'ghost'"
+              size="icon"
+              :class="[
+                'h-8 w-8 text-sm transition-all',
+                n === currentPage
+                  ? 'bg-stone-900 text-stone-50 hover:bg-stone-800'
+                  : 'text-stone-500 hover:text-stone-900',
+              ]"
+              @click="goToPage(n)"
+            >
+              {{ n }}
+            </Button>
+          </template>
+
+          <Button
+            variant="ghost"
+            size="icon"
+            class="h-8 w-8 text-stone-400 hover:text-stone-900"
+            :disabled="currentPage === totalPages"
+            @click="goToPage(currentPage + 1)"
+          >
+            <ChevronRight class="h-4 w-4" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            class="h-8 w-8 text-stone-400 hover:text-stone-900"
+            :disabled="currentPage === totalPages"
+            @click="goToPage(totalPages)"
+          >
+            <ChevronsRight class="h-4 w-4" />
+          </Button>
+        </div>
+      </Pagination>
     </div>
 
     <!-- Create/Edit Dialog -->
     <Dialog :open="showForm" @update:open="(value) => !value && closeForm()">
-      <DialogContent class="max-w-[425px] sm:max-w-[600px]">
+      <DialogContent class="max-w-[425px] sm:max-w-[600px] bg-[#fffcf9]">
         <DialogHeader>
-          <DialogTitle>{{ selectedItem ? 'Edit Item' : 'Create New Item' }}</DialogTitle>
-          <DialogDescription>
-            {{ selectedItem ? 'Update the item details below' : 'Enter the item details below' }}
+          <DialogTitle class="font-['Playfair_Display'] text-xl font-bold text-stone-900">
+            {{ selectedItem ? 'Edit Item' : 'Create New Item' }}
+          </DialogTitle>
+          <DialogDescription class="text-stone-400">
+            {{ selectedItem ? 'Update the item details below.' : 'Enter the item details below.' }}
           </DialogDescription>
         </DialogHeader>
         <ItemForm :item="selectedItem" @submit="handleFormSubmit" @cancel="closeForm" />
       </DialogContent>
     </Dialog>
 
-    <!-- Pagination -->
-    <div v-if="totalPages > 1" class="flex justify-center pt-6">
-      <Pagination :current-page="currentPage" :total-pages="totalPages">
-        <PaginationFirst @click="goToPage(1)" />
-        <PaginationPrev @click="goToPage(currentPage - 1)" />
-
-        <PaginationEllipsis v-if="currentPage > 3" />
-
-        <button
-          v-for="n in visiblePages"
-          :key="n"
-          :class="{
-            'bg-blue-500 text-white': n === currentPage,
-            'bg-gray-100 text-gray-700': n !== currentPage,
-          }"
-          class="px-3 py-1 rounded mx-1"
-          @click="goToPage(n)"
-        >
-          {{ n }}
-        </button>
-
-        <PaginationEllipsis v-if="currentPage < totalPages - 2" />
-
-        <PaginationNext @click="goToPage(currentPage + 1)" />
-        <PaginationLast @click="goToPage(totalPages)" />
-      </Pagination>
-    </div>
-
     <router-view />
   </div>
 </template>
+
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
 import type { Ref } from 'vue'
@@ -141,6 +211,9 @@ import { useItemStore } from '@/stores/item'
 
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
+import { Card, CardContent } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import {
   Dialog,
   DialogContent,
@@ -148,25 +221,7 @@ import {
   DialogTitle,
   DialogDescription,
 } from '@/components/ui/dialog'
-import {
-  Pagination,
-  PaginationPrev,
-  PaginationNext,
-  PaginationFirst,
-  PaginationLast,
-  PaginationEllipsis,
-} from '@/components/ui/pagination'
-import { Input } from '@/components/ui/input'
-import { Search } from 'lucide-vue-next'
-import ItemForm from '@/components/items/ItemForm.vue'
-import type {
-  CreateItemData,
-  Item,
-  ItemCreate,
-  ItemStatus,
-  UpdateItemData,
-} from '@/interfaces/item'
-import ItemCard from '@/components/items/ItemCard.vue'
+import { Pagination } from '@/components/ui/pagination'
 import {
   Select,
   SelectContent,
@@ -175,20 +230,40 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 
-import { Label } from '@/components/ui/label'
+import {
+  Search,
+  Plus,
+  Loader2,
+  AlertCircle,
+  PackageSearch,
+  ChevronLeft,
+  ChevronRight,
+  ChevronsLeft,
+  ChevronsRight,
+} from 'lucide-vue-next'
+
+import ItemForm from '@/components/items/ItemForm.vue'
+import ItemCard from '@/components/items/ItemCard.vue'
+import type {
+  CreateItemData,
+  Item,
+  ItemCreate,
+  ItemStatus,
+  UpdateItemData,
+} from '@/interfaces/item'
 
 const itemStore = useItemStore()
 const searchQuery = ref('')
 const showForm = ref(false)
 const selectedItem: Ref<Item | null> = ref(null)
-
 const currentPage = ref(1)
 const pageSize = ref(12)
-
 const totalPages = computed(() => itemStore.totalPages)
 
+const filters = ref<{ type?: string; category?: string; status?: string }>({})
+
 const visiblePages = computed(() => {
-  const pages = []
+  const pages: number[] = []
   for (let n = 1; n <= totalPages.value; n++) {
     if (Math.abs(n - currentPage.value) <= 2 || n === 1 || n === totalPages.value) {
       pages.push(n)
@@ -198,9 +273,7 @@ const visiblePages = computed(() => {
 })
 
 function goToPage(page: number) {
-  if (page < 1) page = 1
-  if (page > totalPages.value) page = totalPages.value
-  currentPage.value = page
+  currentPage.value = Math.min(Math.max(page, 1), totalPages.value)
 }
 
 const fetchItems = async () => {
@@ -209,44 +282,36 @@ const fetchItems = async () => {
     offset: (currentPage.value - 1) * pageSize.value,
     limit: pageSize.value,
   })
-  // sync component page with store
   currentPage.value = itemStore.currentPage
 }
-onMounted(async () => {
-  if (itemStore.itemCategories.length === 0) {
-    await itemStore.fetchItemCategories()
-  }
 
+onMounted(async () => {
+  if (itemStore.itemCategories.length === 0) await itemStore.fetchItemCategories()
+  if (itemStore.items.length > 0) {
+    return
+  }
   await fetchItems()
 })
-
-const filters = ref<{
-  type?: string
-  category?: string
-  status?: string
-}>({})
 
 const applyFilters = async () => {
   currentPage.value = 1
   await fetchItems()
 }
-
 const clearFilters = async () => {
   filters.value = {}
   currentPage.value = 1
   await fetchItems()
 }
-const openCreateForm = (): void => {
+
+const openCreateForm = () => {
   selectedItem.value = null
   showForm.value = true
 }
-
-const openEditForm = (item: Item): void => {
+const openEditForm = (item: Item) => {
   selectedItem.value = item
   showForm.value = true
 }
-
-const closeForm = (): void => {
+const closeForm = () => {
   selectedItem.value = null
   showForm.value = false
 }
@@ -259,25 +324,22 @@ interface ItemFormSubmit {
 
 const handleFormSubmit = async ({ formData, file, removedPhoto }: ItemFormSubmit) => {
   if (!selectedItem.value) {
-    // CREATE
     const res = await itemStore.createItem(formData as CreateItemData)
-    if (res.success && file && res.data?.id) {
-      await itemStore.uploadItemPhoto(res.data.id, file)
-    }
+    if (res.success && file && res.data?.id) await itemStore.uploadItemPhoto(res.data.id, file)
   } else {
-    // UPDATE
     const res = await itemStore.updateItem(selectedItem.value.id, formData as UpdateItemData)
     if (res.success && res.data?.id) {
       if (removedPhoto) await itemStore.deleteItemPhoto(res.data.id)
       if (file) await itemStore.uploadItemPhoto(res.data.id, file)
     }
   }
-
   closeForm()
   await fetchItems()
 }
 
-watch(currentPage, async () => {
-  await fetchItems()
-})
+watch(currentPage, fetchItems)
 </script>
+
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=DM+Sans:wght@300;400;500&display=swap');
+</style>
