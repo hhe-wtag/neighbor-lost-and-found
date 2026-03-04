@@ -77,3 +77,14 @@ class ClaimRepository(BaseRepository[ItemClaim, ClaimCreate, ClaimUpdate]):
             )
         )
         return result.scalar_one_or_none()
+
+    async def update_status(
+        self, claim: ItemClaim, status: ClaimStatus, resolved_at=None
+    ) -> ItemClaim:
+        claim.status = status
+        if resolved_at:
+            claim.resolved_at = resolved_at
+        await self.session.flush()
+        await self.session.commit()
+
+        return await self.get_by_id(claim.id)

@@ -1,11 +1,16 @@
+from datetime import datetime, UTC
 from typing import List
 
-from app.core.exception import NotFoundException, BadRequestException
+from app.core.exception import (
+    NotFoundException,
+    BadRequestException,
+    ForbiddenException,
+)
 from app.models.item import ItemStatus
-from app.models.item_claim import ItemClaim
+from app.models.item_claim import ItemClaim, ClaimStatus
 from app.repositories.item_claim import ClaimRepository
 from app.repositories.item import ItemRepository
-from app.schemas.item_claim import ClaimCreate
+from app.schemas.item_claim import ClaimCreate, ClaimUpdate, ClaimResolve
 
 
 class ItemClaimService:
@@ -70,3 +75,56 @@ class ItemClaimService:
             return []
 
         return claim
+
+    async def get_claim_or_404(self, claim_id: int) -> ItemClaim:
+        claim = await self.claim_repo.get_by_id(claim_id)
+        if not claim:
+            raise NotFoundException("Claim not found")
+        return claim
+
+    async def update_claim(
+        self, claim_id, current_user_id, payload: ClaimUpdate
+    ) -> ItemClaim:
+        """
+        Update claim message for an item by Claimant
+        """
+        claim = await self.get_claim_or_404(claim_id)
+
+        if claim.claimant_user_id != current_user_id:
+            raise BadRequestException("You cannot edit other users claims")
+
+        if claim.status != ClaimStatus.PENDING:
+            raise BadRequestException("Only pending claims can be edited")
+
+        return await self.claim_repo.update(claim, payload)
+
+    async def resolve_claim(
+        self, claim_id: int, current_user_id: int, payload: ClaimResolve
+    ) -> ItemClaim:
+        """
+        Approve or reject a claim.
+        Only the item owner can resolve claims.
+        Approving a claim marks the item as CLAIMED and rejects all other pending claims.
+        """
+        claim = await self.get_claim_or_404(claim_id)
+        item = await self.item_repo.get_by_id(claim.item_id)
+
+        if item.user_id != current_user_id:
+            raise ForbiddenException("Only the item owner can resolve claims")
+
+        if claim.status != ClaimStatus.PENDING:
+            raise BadRequestException("Only pending claims can be resolved")
+
+        now = datetime.now(UTC)
+
+        if payload.status == ClaimStatus.APPROVED:
+            item.status = ItemStatus.CLAIMED
+            await self.item_repo.session.flush()
+
+        else:
+            item.status = ItemStatus.OPEN
+            await self.item_repo.session.flush()
+
+        return await self.claim_repo.update_status(
+            claim, payload.status, resolved_at=now
+        )
