@@ -2,7 +2,6 @@ import enum
 from datetime import datetime, UTC
 from typing import Optional
 from sqlalchemy import (
-    Text,
     DateTime,
     Enum,
     Integer,
@@ -37,8 +36,6 @@ class ItemClaim(Base):
         Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False
     )
 
-    message: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
-
     status: Mapped[ClaimStatus] = mapped_column(
         Enum(ClaimStatus), default=ClaimStatus.PENDING, nullable=False
     )
@@ -55,6 +52,18 @@ class ItemClaim(Base):
 
     claimant: Mapped["User"] = relationship("User", back_populates="claims")
     item: Mapped["Item"] = relationship("Item", back_populates="claims")
+    messages: Mapped[list["ClaimMessage"]] = relationship(
+        "ClaimMessage",
+        back_populates="claim",
+        cascade="all, delete-orphan",
+    )
+
+    @property
+    def last_message(self):
+        """Most recent message — derived from the already-loaded messages list."""
+        if not self.messages:
+            return None
+        return max(self.messages, key=lambda m: m.created_at)
 
     def __repr__(self) -> str:
         return (
