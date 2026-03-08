@@ -153,7 +153,11 @@
               </div>
 
               <Separator class="bg-gradient-to-r from-stone-200 to-transparent" />
-              <ItemClaimsList v-if="ownerClaims !== null" :claims="ownerClaims" />
+              <ItemClaimsList
+                v-if="ownerClaims !== null"
+                :claims="ownerClaims"
+                @open-chat="openChat"
+              />
             </template>
 
             <!-- Non-owner + resolved -->
@@ -179,6 +183,7 @@
       </Alert>
     </div>
   </div>
+  <ItemClaimChat :claim="activeChatClaim" :item-id="itemStore.currentItem?.id ?? 0" />
 </template>
 
 <script setup lang="ts">
@@ -186,7 +191,7 @@ import { computed, onBeforeMount } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useItemStore } from '@/stores/item'
 import { useUserStore } from '@/stores/user'
-import type { ItemResponse, ClaimListResponse, MyClaimResponse } from '@/interfaces/item'
+import type { ItemResponse } from '@/interfaces/item'
 
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -200,6 +205,9 @@ import ItemMap from './ItemMap.vue'
 import ItemClaimForm from './ItemClaimForm.vue'
 import ItemMyClaim from './ItemMyClaim.vue'
 import ItemClaimsList from './ItemClaimsList.vue'
+import { useClaimStore } from '@/stores/claim'
+import ItemClaimChat from './ItemClaimChat.vue'
+import type { ClaimListItem } from '@/interfaces/claim'
 
 const router = useRouter()
 const route = useRoute()
@@ -212,12 +220,9 @@ const emit = defineEmits<{
 
 onBeforeMount(async () => {
   const id = route.params.id as string
-  if (!id) {
-    return
-  }
-
+  if (!id) return
   await itemStore.fetchItemById(Number(id))
-  await itemStore.fetchClaims(Number(id))
+  await claimStore.fetchClaims(Number(id))
 })
 
 const currentItem = computed<ItemResponse | null>(() => itemStore.currentItem)
@@ -226,17 +231,11 @@ const isOwner = computed(
   () => !!userStore.profile && currentItem.value?.user_id === userStore.profile.id,
 )
 
-const ownerClaims = computed<ClaimListResponse[] | null>(() =>
-  isOwner.value && Array.isArray(itemStore.currentItemClaims)
-    ? (itemStore.currentItemClaims as ClaimListResponse[])
-    : null,
-)
+const claimStore = useClaimStore()
 
-const myClaim = computed<MyClaimResponse | null>(() =>
-  !isOwner.value && !Array.isArray(itemStore.currentItemClaims) && itemStore.currentItemClaims
-    ? (itemStore.currentItemClaims as MyClaimResponse)
-    : null,
-)
+// Use store getters directly — no manual narrowing needed in the component
+const ownerClaims = computed(() => (isOwner.value ? claimStore.asOwnerClaims : null))
+const myClaim = computed(() => (!isOwner.value ? claimStore.asMyClaim : null))
 
 const formattedDate = computed<string>(() => {
   if (!currentItem.value?.created_at) return ''
@@ -248,6 +247,20 @@ const formattedDate = computed<string>(() => {
     minute: '2-digit',
   })
 })
+
+const activeChatClaim = computed(() => {
+  if (claimStore.activeClaimId === null) return null
+  // Owner: find in claims list
+  const fromList = claimStore.asOwnerClaims?.find((c) => c.id === claimStore.activeClaimId)
+  if (fromList) return fromList
+  // Claimant: use their own claim object
+  if (claimStore.asMyClaim?.id === claimStore.activeClaimId) return claimStore.asMyClaim
+  return null
+})
+
+const openChat = (claim: ClaimListItem) => {
+  claimStore.openClaimThread(claim.id)
+}
 </script>
 
 <style>
