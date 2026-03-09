@@ -6,13 +6,13 @@
         <h1 class="font-['Playfair_Display'] text-3xl font-bold text-stone-900">Items</h1>
         <p class="mt-1 text-sm text-stone-400">Browse lost & found reports</p>
       </div>
+
       <div class="flex items-center gap-3">
         <div class="relative">
           <Search class="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-stone-400" />
           <Input
             v-model="searchQuery"
             placeholder="Search items..."
-            type="search"
             class="pl-9 w-56 bg-white/70 border-stone-200 placeholder:text-stone-400 focus-visible:ring-stone-300"
           />
         </div>
@@ -240,6 +240,7 @@ import {
   ChevronRight,
   ChevronsLeft,
   ChevronsRight,
+  MapPin,
 } from 'lucide-vue-next'
 
 import ItemForm from '@/components/items/ItemForm.vue'
@@ -251,6 +252,7 @@ import type {
   ItemStatus,
   UpdateItemData,
 } from '@/interfaces/item'
+import { useRouter } from 'vue-router'
 
 const itemStore = useItemStore()
 const searchQuery = ref('')
@@ -258,10 +260,10 @@ const showForm = ref(false)
 const selectedItem: Ref<Item | null> = ref(null)
 const currentPage = ref(1)
 const pageSize = ref(12)
-const totalPages = computed(() => itemStore.totalPages)
-
+const searchDebounce = ref<ReturnType<typeof setTimeout> | null>(null)
 const filters = ref<{ type?: string; category?: string; status?: string }>({})
 
+const totalPages = computed(() => itemStore.totalPages)
 const visiblePages = computed(() => {
   const pages: number[] = []
   for (let n = 1; n <= totalPages.value; n++) {
@@ -272,6 +274,12 @@ const visiblePages = computed(() => {
   return pages
 })
 
+onMounted(async () => {
+  if (itemStore.itemCategories.length === 0) await itemStore.fetchItemCategories()
+
+  await fetchItems()
+})
+
 function goToPage(page: number) {
   currentPage.value = Math.min(Math.max(page, 1), totalPages.value)
 }
@@ -279,18 +287,20 @@ function goToPage(page: number) {
 const fetchItems = async () => {
   await itemStore.fetchAllItems({
     ...filters.value,
+    keyword: searchQuery.value.trim() || undefined,
     offset: (currentPage.value - 1) * pageSize.value,
     limit: pageSize.value,
   })
   currentPage.value = itemStore.currentPage
 }
 
-onMounted(async () => {
-  if (itemStore.itemCategories.length === 0) await itemStore.fetchItemCategories()
-  if (itemStore.items.length > 0) {
-    return
-  }
-  await fetchItems()
+// Debounce keyword search — fires 400ms after user stops typing
+watch(searchQuery, () => {
+  if (searchDebounce.value) clearTimeout(searchDebounce.value)
+  searchDebounce.value = setTimeout(() => {
+    currentPage.value = 1
+    fetchItems()
+  }, 400)
 })
 
 const applyFilters = async () => {

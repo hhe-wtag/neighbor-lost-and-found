@@ -64,6 +64,11 @@ const router = createRouter({
       name: 'item-details',
       component: () => import('@/components/items/ItemDetails.vue'),
     },
+    {
+      path: '/items/search',
+      name: 'ItemSearchMap',
+      component: () => import('@/components/items/ItemSearchMap.vue'),
+    },
 
     {
       path: '/:pathMatch(.*)*',

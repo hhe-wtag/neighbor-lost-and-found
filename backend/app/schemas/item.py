@@ -26,21 +26,13 @@ class ItemCreate(BaseModel):
 class ItemUpdate(BaseModel):
     title: Optional[str] = Field(None, min_length=3, max_length=255)
     description: Optional[str] = Field(None, max_length=2000)
-    type: Optional[ItemType]
+    type: Optional[ItemType] = None
     category: Optional[ItemCategory] = None
     date_occurred: Optional[date] = None
     lat: Optional[float] = Field(None, ge=-90, le=90)
     lng: Optional[float] = Field(None, ge=-180, le=180)
     location_name: Optional[str] = Field(None, max_length=255)
     status: Optional[ItemStatus] = None
-    # has_photo: bool = Field(exclude=True)
-
-    # @computed_field
-    # @property
-    # def photo_url(self) -> Optional[str]:
-    #     if self.has_photo:
-    #         return f"/items/{self.id}/photo"
-    #     return None
 
 
 class ItemOwnerResponse(BaseModel):
@@ -92,6 +84,9 @@ class ItemListResponse(BaseModel):
     has_photo: bool = Field(default=None, exclude=True)
     status: ItemStatus
     created_at: datetime
+    distance_km: Optional[float] = (
+        None  # populated by service when radius search is active
+    )
 
     model_config = {"from_attributes": True}
 

@@ -4,14 +4,13 @@ from fastapi import APIRouter, Query, status
 
 from app.api.v1.deps import ItemServiceDep, CurrentUserDep
 from app.models.item import ItemCategory, ItemStatus, ItemType
-from app.schemas.base_response import APIResponse
+from app.schemas.base_response import APIResponse, PaginatedData
 from app.schemas.item import (
     ItemCreate,
     ItemListResponse,
     ItemResponse,
     ItemUpdate,
 )
-from app.schemas.base_response import PaginatedData
 
 router = APIRouter(prefix="/items", tags=["Items"])
 
@@ -28,16 +27,11 @@ async def create_item(
     current_user: CurrentUserDep,
 ):
     item = await service.create_item(payload, current_user.id)
-
-    return {
-        "success": True,
-        "data": item,
-        "message": "Item created successfully.",
-    }
+    return {"success": True, "data": item, "message": "Item created successfully."}
 
 
 # ------------------------------------------------------------------
-# GET /items — browse listings with optional filters
+# GET /items — browse listings with optional filters, keyword, and radius
 # ------------------------------------------------------------------
 @router.get("/", response_model=APIResponse[PaginatedData[ItemListResponse]])
 async def list_items(
@@ -45,21 +39,45 @@ async def list_items(
     type: Optional[ItemType] = Query(None),
     category: Optional[ItemCategory] = Query(None),
     status: Optional[ItemStatus] = Query(None),
+    keyword: Optional[str] = Query(
+        None, max_length=100, description="Search in title and description"
+    ),
+    lat: Optional[float] = Query(
+        None, ge=-90, le=90, description="Origin latitude for radius search"
+    ),
+    lng: Optional[float] = Query(
+        None, ge=-180, le=180, description="Origin longitude for radius search"
+    ),
+    radius_km: Optional[float] = Query(
+        None,
+        gt=0,
+        le=100,
+        alias="radius",
+        description="Search radius in kilometres (max 100)",
+    ),
     offset: int = Query(0, ge=0),
     limit: int = Query(20, ge=1, le=100),
 ):
+    """
+    Browse items with optional filtering, full-text keyword search, and radius search.
+
+    - `keyword` searches across title and description (case-insensitive).
+    - `lat`, `lng`, and `radius_km` must all be provided together for radius search.
+      Results are ordered by distance ascending when radius search is active.
+    - `distance_km` is included in each result when `lat`/`lng` are provided.
+    """
     items = await service.list_items_paginated(
         type=type,
         category=category,
         status=status,
+        keyword=keyword,
+        lat=lat,
+        lng=lng,
+        radius_km=radius_km,
         offset=offset,
         limit=limit,
     )
-    return {
-        "success": True,
-        "data": items,
-        "message": "Items retrieved successfully.",
-    }
+    return {"success": True, "data": items, "message": "Items retrieved successfully."}
 
 
 # ------------------------------------------------------------------
@@ -71,7 +89,6 @@ async def list_my_items(
     current_user: CurrentUserDep,
 ):
     items = await service.list_user_items(current_user.id)
-
     return {
         "success": True,
         "data": items,
@@ -97,21 +114,13 @@ async def get_categories():
 @router.get("/{item_id}", response_model=APIResponse[ItemResponse])
 async def get_item(item_id: int, service: ItemServiceDep):
     item = await service.get_item_or_404(item_id)
-
-    return {
-        "success": True,
-        "data": item,
-        "message": "Item retrieved successfully.",
-    }
+    return {"success": True, "data": item, "message": "Item retrieved successfully."}
 
 
 # ------------------------------------------------------------------
 # PATCH /items/{item_id} — edit your own item
 # ------------------------------------------------------------------
-@router.patch(
-    "/{item_id}",
-    response_model=APIResponse[ItemResponse],
-)
+@router.patch("/{item_id}", response_model=APIResponse[ItemResponse])
 async def update_item(
     item_id: int,
     payload: ItemUpdate,
@@ -119,16 +128,11 @@ async def update_item(
     current_user: CurrentUserDep,
 ):
     item = await service.update_item(item_id, payload, current_user.id)
-
-    return {
-        "success": True,
-        "data": item,
-        "message": "Item updated successfully.",
-    }
+    return {"success": True, "data": item, "message": "Item updated successfully."}
 
 
 # ------------------------------------------------------------------
-# DELETE /items/{item_id} — delete own item
+# DELETE /items/{item_id} — soft delete own item
 # ------------------------------------------------------------------
 @router.delete("/{item_id}", response_model=APIResponse[None])
 async def delete_item(
@@ -137,9 +141,4 @@ async def delete_item(
     current_user: CurrentUserDep,
 ):
     await service.remove_item(item_id, current_user.id)
-
-    return {
-        "success": True,
-        "data": None,
-        "message": "Item removed successfully.",
-    }
+    return {"success": True, "data": None, "message": "Item removed successfully."}
