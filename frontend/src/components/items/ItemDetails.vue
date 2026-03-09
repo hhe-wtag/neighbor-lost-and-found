@@ -31,7 +31,10 @@
         <div class="flex flex-col gap-4 lg:w-[44%]">
           <Card class="overflow-hidden border-0 bg-stone-100 shadow-md">
             <div class="relative">
-              <ItemImageCarousel :images="[itemStore.currentItem.photo_url || '']" />
+              <ItemImageCarousel
+                :images="[getItemPhotoUrl(itemStore.currentItem) || '']"
+                :key="(itemStore.currentItem?.photo_url ?? '') + Date.now()"
+              />
               <Badge
                 :class="[
                   'absolute left-3 top-3 backdrop-blur-sm border',
@@ -140,7 +143,7 @@
               <div class="flex flex-wrap gap-3">
                 <Button
                   class="flex-1 bg-stone-900 text-stone-50 hover:bg-stone-800 active:scale-[0.98] transition-all"
-                  @click="emit('openEditForm', itemStore.currentItem)"
+                  @click="openEditForm(itemStore.currentItem)"
                 >
                   <Pencil class="mr-2 h-4 w-4" /> Edit Item
                 </Button>
@@ -187,14 +190,27 @@
     </div>
   </div>
   <ItemClaimChat :claim="activeChatClaim" :item-id="itemStore.currentItem?.id ?? 0" />
+  <Dialog :open="showForm" @update:open="(value) => !value && closeForm()">
+    <DialogContent class="max-w-[425px] sm:max-w-[600px] bg-[#fffcf9]">
+      <DialogHeader>
+        <DialogTitle class="font-['Playfair_Display'] text-xl font-bold text-stone-900">
+          Edit Item
+        </DialogTitle>
+        <DialogDescription class="text-stone-400">
+          Update the item details below.
+        </DialogDescription>
+      </DialogHeader>
+      <ItemForm :item="selectedItem" @submit="handleFormSubmit" @cancel="closeForm" />
+    </DialogContent>
+  </Dialog>
 </template>
 
 <script setup lang="ts">
-import { computed, onBeforeMount } from 'vue'
+import { computed, onBeforeMount, ref } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useItemStore } from '@/stores/item'
 import { useUserStore } from '@/stores/user'
-import type { ItemResponse } from '@/interfaces/item'
+import type { ItemCreate, ItemListResponse, ItemResponse, ItemStatus } from '@/interfaces/item'
 
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -211,15 +227,29 @@ import ItemClaimsList from './ItemClaimsList.vue'
 import { useClaimStore } from '@/stores/claim'
 import ItemClaimChat from './ItemClaimChat.vue'
 import type { ClaimListItem } from '@/interfaces/claim'
+import Dialog from '../ui/dialog/Dialog.vue'
+import DialogContent from '../ui/dialog/DialogContent.vue'
+import DialogHeader from '../ui/dialog/DialogHeader.vue'
+import DialogTitle from '../ui/dialog/DialogTitle.vue'
+import DialogDescription from '../ui/dialog/DialogDescription.vue'
+import ItemForm from './ItemForm.vue'
+import placeHolderImage from '@/assets/product-placeholder.jpg'
+
+interface ItemFormSubmit {
+  formData: ItemCreate | (ItemCreate & { status?: ItemStatus })
+  file: File | null
+  removedPhoto: boolean
+}
 
 const router = useRouter()
 const route = useRoute()
 const itemStore = useItemStore()
 const userStore = useUserStore()
 
-const emit = defineEmits<{
-  (e: 'openEditForm', item: ItemResponse): void
-}>()
+const emit = defineEmits<{ (e: 'openEditForm', item: ItemListResponse): void }>()
+
+const showForm = ref(false)
+const selectedItem = ref<ItemResponse | null>(null)
 
 onBeforeMount(async () => {
   const id = route.params.id as string
@@ -227,6 +257,16 @@ onBeforeMount(async () => {
   await itemStore.fetchItemById(Number(id))
   await claimStore.fetchClaims(Number(id))
 })
+
+const openEditForm = (item: ItemResponse) => {
+  selectedItem.value = item
+  showForm.value = true
+}
+
+const closeForm = () => {
+  selectedItem.value = null
+  showForm.value = false
+}
 
 const currentItem = computed<ItemResponse | null>(() => itemStore.currentItem)
 
@@ -263,6 +303,27 @@ const activeChatClaim = computed(() => {
 
 const openChat = (claim: ClaimListItem) => {
   claimStore.openClaimThread(claim.id)
+}
+
+const getItemPhotoUrl = (item: ItemResponse) =>
+  item.photo_url ? `${item.photo_url}?t=${Date.now()}` : placeHolderImage
+
+const handleImageError = (event: Event) => {
+  ;(event.target as HTMLImageElement).src = placeHolderImage
+}
+
+const handleFormSubmit = async ({ formData, file, removedPhoto }: ItemFormSubmit) => {
+  if (!selectedItem.value) {
+    return
+  }
+  const res = await itemStore.updateItem(selectedItem.value?.id, formData as UpdateItemData)
+  if (res.success && res.data?.id) {
+    if (removedPhoto) await itemStore.deleteItemPhoto(res.data.id)
+    if (file) await itemStore.uploadItemPhoto(res.data.id, file)
+  }
+
+  closeForm()
+  await itemStore.fetchItemById(Number(route.params.id as string))
 }
 </script>
 
