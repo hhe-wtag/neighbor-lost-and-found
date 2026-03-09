@@ -8,6 +8,20 @@ from app.repositories.item import ItemRepository
 from app.schemas.base_response import PaginatedData
 from app.schemas.item import ItemCreate, ItemUpdate, ItemListResponse
 
+EARTH_RADIUS_KM = 6371.0
+
+
+def _haversine(lat1: float, lng1: float, lat2: float, lng2: float) -> float:
+    """Great-circle distance in km between two (lat, lng) points."""
+    lat1, lng1, lat2, lng2 = map(math.radians, [lat1, lng1, lat2, lng2])
+    dlat = lat2 - lat1
+    dlng = lng2 - lng1
+    a = (
+        math.sin(dlat / 2) ** 2
+        + math.cos(lat1) * math.cos(lat2) * math.sin(dlng / 2) ** 2
+    )
+    return EARTH_RADIUS_KM * 2 * math.asin(math.sqrt(a))
+
 
 class ItemService:
     def __init__(self, repo: ItemRepository):
@@ -29,7 +43,7 @@ class ItemService:
         return item
 
     # ------------------------------------------------------------------
-    # List items with optional filters
+    # List items with optional filters, keyword search, and radius search
     # ------------------------------------------------------------------
     async def list_items_paginated(
         self,
@@ -37,19 +51,65 @@ class ItemService:
         type: Optional[ItemType] = None,
         category: Optional[ItemCategory] = None,
         status: Optional[ItemStatus] = None,
+        keyword: Optional[str] = None,
+        lat: Optional[float] = None,
+        lng: Optional[float] = None,
+        radius_km: Optional[float] = None,
         offset: int = 0,
         limit: int = 20,
     ) -> PaginatedData[ItemListResponse]:
+
+        # --- Radius pre-filter (business logic, kept in service) ---
+        # Fetch ALL unfiltered items to compute distances, then pass the
+        # matched IDs (sorted by distance) into the repository. This keeps
+        # all geospatial logic out of SQL and in pure Python.
+        item_ids: Optional[list[int]] = None
+        order_by_ids: Optional[list[int]] = None
+        distances: dict[int, float] = {}
+
+        if lat is not None and lng is not None and radius_km is not None:
+            all_items = await self.repo.get_all_filtered(
+                type=type,
+                category=category,
+                status=status,
+            )
+
+            nearby = []
+            for item in all_items:
+                d = _haversine(lat, lng, float(item.lat), float(item.lng))
+                if d <= radius_km:
+                    distances[item.id] = round(d, 3)
+                    nearby.append(item.id)
+
+            # Sort by distance ascending so the repository can preserve that order
+            nearby.sort(key=lambda id: distances[id])
+            item_ids = nearby
+            order_by_ids = nearby
+
+        # Normalise keyword for the repository
+        normalised_keyword = keyword.strip().lower() if keyword else None
+
         items, total = await self.repo.get_all_filtered_paginated(
             type=type,
             category=category,
             status=status,
+            keyword=normalised_keyword,
+            item_ids=item_ids,
+            order_by_ids=order_by_ids,
             offset=offset,
             limit=limit,
         )
 
+        # Build responses, stamping distance_km where available
+        validated_items = []
+        for item in items:
+            response = ItemListResponse.model_validate(item)
+            if item.id in distances:
+                response.distance_km = distances[item.id]
+            validated_items.append(response)
+
         return PaginatedData(
-            items=[ItemListResponse.model_validate(item) for item in items],
+            items=validated_items,
             total=total,
             page=(offset // limit) + 1,
             total_pages=math.ceil(total / limit) if total > 0 else 1,
@@ -74,11 +134,8 @@ class ItemService:
         item = await self.get_item_or_404(item_id)
         self._assert_owner(item, current_user_id)
 
-        # Stamp resolved_at when status transitions to RESOLVED
         if payload.status == ItemStatus.RESOLVED and item.status != ItemStatus.RESOLVED:
-            payload = payload.model_copy(
-                update={"resolved_at": datetime.now(UTC)}  # type: ignore[arg-type]
-            )
+            payload = payload.model_copy(update={"resolved_at": datetime.now(UTC)})
 
         return await self.repo.update(item, payload)
 

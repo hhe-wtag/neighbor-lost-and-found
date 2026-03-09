@@ -97,6 +97,10 @@ export const useItemStore = defineStore('item', {
       type?: ItemType
       category?: string[]
       status?: ItemStatus
+      keyword?: string
+      lat?: number
+      lng?: number
+      radius?: number
       offset?: number
       limit?: number
     }) {

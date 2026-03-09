@@ -1,6 +1,7 @@
 from typing import Optional, Sequence
+
+from sqlalchemy import select, func, or_
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func
 from sqlalchemy.orm import selectinload
 
 from app.models.item import Item, ItemStatus, ItemType, ItemCategory
@@ -14,7 +15,6 @@ class ItemRepository(BaseRepository[Item, ItemCreate, ItemUpdate]):
         super().__init__(Item, session)
 
     async def get_by_id_with_user(self, id: int) -> Item:
-
         photo_exists = (
             select(ItemPhoto.item_id).where(ItemPhoto.item_id == Item.id).exists()
         )
@@ -81,9 +81,21 @@ class ItemRepository(BaseRepository[Item, ItemCreate, ItemUpdate]):
         type: Optional[ItemType] = None,
         category: Optional[ItemCategory] = None,
         status: Optional[ItemStatus] = None,
+        keyword: Optional[str] = None,
+        item_ids: Optional[list[int]] = None,
+        order_by_ids: Optional[list[int]] = None,
         offset: int = 0,
         limit: int = 20,
     ) -> tuple[list[Item], int]:
+        """
+        Paginated item query.
+
+        - keyword: pre-validated by the service, applied as a case-insensitive
+          LIKE across title and description.
+        - item_ids: when provided (radius search), restricts results to this set.
+        - order_by_ids: when provided, results are returned in this exact order
+          (distance-ascending pre-sorted by the service).
+        """
         base_query = select(Item)
 
         if type:
@@ -95,6 +107,22 @@ class ItemRepository(BaseRepository[Item, ItemCreate, ItemUpdate]):
         else:
             base_query = base_query.where(Item.status != ItemStatus.REMOVED)
 
+        if keyword:
+            term = f"%{keyword}%"
+            base_query = base_query.where(
+                or_(
+                    func.lower(Item.title).like(term),
+                    func.lower(Item.description).like(term),
+                )
+            )
+
+        if item_ids is not None:
+            if not item_ids:
+                # No items matched the radius filter — return early
+                return [], 0
+            base_query = base_query.where(Item.id.in_(item_ids))
+
+        # Count before pagination
         count_result = await self.session.execute(
             select(func.count()).select_from(base_query.subquery())
         )
@@ -104,16 +132,29 @@ class ItemRepository(BaseRepository[Item, ItemCreate, ItemUpdate]):
             select(ItemPhoto.item_id).where(ItemPhoto.item_id == Item.id).exists()
         )
 
-        items_result = await self.session.execute(
-            base_query.add_columns(photo_exists.label("has_photo"))
-            .options(selectinload(Item.user))
-            .order_by(Item.created_at.desc())
-            .offset(offset)
-            .limit(limit)
-        )
+        # Ordering: preserve distance order from service if provided, else recency
+        if order_by_ids:
+            id_order = {id: idx for idx, id in enumerate(order_by_ids)}
+            items_result = await self.session.execute(
+                base_query.add_columns(photo_exists.label("has_photo"))
+                .options(selectinload(Item.user))
+                .offset(offset)
+                .limit(limit)
+            )
+            rows = items_result.all()
+            rows.sort(key=lambda row: id_order.get(row[0].id, float("inf")))
+        else:
+            items_result = await self.session.execute(
+                base_query.add_columns(photo_exists.label("has_photo"))
+                .options(selectinload(Item.user))
+                .order_by(Item.created_at.desc())
+                .offset(offset)
+                .limit(limit)
+            )
+            rows = items_result.all()
 
         items = []
-        for item, has_photo in items_result.all():
+        for item, has_photo in rows:
             item.has_photo = has_photo
             items.append(item)
 
