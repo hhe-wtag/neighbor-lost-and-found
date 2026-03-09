@@ -70,7 +70,8 @@
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="open">Open</SelectItem>
-              <SelectItem value="resolved">Resolved</SelectItem>
+              <!-- <SelectItem value="resolved">Resolved</SelectItem> -->
+              <SelectItem value="claimed">Claimed</SelectItem>
             </SelectContent>
           </Select>
         </div>

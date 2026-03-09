@@ -53,7 +53,7 @@
               item.status === 'open' ? 'bg-sky-500' : 'bg-stone-400',
             ]"
           />
-          {{ item.status === 'open' ? 'Open' : 'Resolved' }}
+          {{ item.status === 'open' ? 'Open' : 'Claimed' }}
         </Badge>
       </div>
 

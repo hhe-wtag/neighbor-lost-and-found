@@ -46,13 +46,13 @@ export const useClaimStore = defineStore('claim', {
         ? (state.currentItemClaims as ClaimListResponse)
         : null,
 
-    asMyClaim: (state): MyClaimResponse | null =>
-      !Array.isArray(state.currentItemClaims) && state.currentItemClaims !== null
-        ? (state.currentItemClaims as MyClaimResponse)
-        : null,
-
-    hasExistingClaim: (state): boolean =>
-      !Array.isArray(state.currentItemClaims) && state.currentItemClaims !== null,
+    hasExistingClaim: (state): boolean => {
+      return state.currentItemClaims !== null && !Array.isArray(state.currentItemClaims)
+    },
+    asMyClaim: (state): MyClaimResponse | null => {
+      if (state.currentItemClaims === null || Array.isArray(state.currentItemClaims)) return null
+      return state.currentItemClaims
+    },
   },
 
   actions: {

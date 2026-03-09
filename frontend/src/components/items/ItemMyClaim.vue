@@ -1,7 +1,9 @@
 <template>
   <div class="space-y-3">
     <div class="flex items-center justify-between">
-      <span class="font-['Playfair_Display'] text-base font-bold text-stone-900">Your Claim</span>
+      <span class="font-['Playfair_Display'] text-base font-bold text-stone-900">{{
+        sectionLabel
+      }}</span>
       <div class="flex items-center gap-2">
         <Badge :class="['border text-[0.65rem]', statusConfig[claim.status].class]">
           {{ statusConfig[claim.status].label }}
@@ -93,7 +95,14 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Clock, Pencil, X, Save, Loader2, AlertCircle, MessageSquare } from 'lucide-vue-next'
 import type { MyClaimResponse } from '@/interfaces/claim'
 
-const props = defineProps<{ claim: MyClaimResponse }>()
+const props = defineProps<{
+  claim: MyClaimResponse
+  itemType: 'lost' | 'found'
+}>()
+
+const sectionLabel = computed(() =>
+  props.itemType === 'lost' ? 'Your Sighting Report' : 'Your Claim',
+)
 
 const claimStore = useClaimStore()
 const editing = ref(false)

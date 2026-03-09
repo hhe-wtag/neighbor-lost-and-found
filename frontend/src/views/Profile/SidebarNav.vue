@@ -14,7 +14,7 @@ const sidebarNavItems = [
   },
   {
     title: 'Update Profile',
-    route: { name: 'update-profile' },
+    route: { name: 'update-pro file' },
   },
   {
     title: 'Change Password',

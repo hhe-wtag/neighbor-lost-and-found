@@ -144,12 +144,6 @@
                 >
                   <Pencil class="mr-2 h-4 w-4" /> Edit Item
                 </Button>
-                <Button
-                  variant="outline"
-                  class="border-stone-300 text-stone-500 hover:text-stone-900 hover:border-stone-400 transition-all"
-                >
-                  <Share2 class="mr-2 h-4 w-4" /> Share
-                </Button>
               </div>
 
               <Separator class="bg-gradient-to-r from-stone-200 to-transparent" />
@@ -169,8 +163,17 @@
 
             <!-- Non-owner + open: claim flow -->
             <template v-else>
-              <ItemMyClaim v-if="myClaim" :claim="myClaim" />
-              <ItemClaimForm v-else :item-id="itemStore.currentItem.id" />
+              <ItemMyClaim
+                v-if="claimStore.hasExistingClaim && claimStore.asMyClaim"
+                :claim="claimStore.asMyClaim"
+                :item-type="itemStore.currentItem.type"
+              />
+              <!-- No claim yet → show the form -->
+              <ItemClaimForm
+                v-else
+                :item-id="itemStore.currentItem.id"
+                :item-type="itemStore.currentItem.type"
+              />
             </template>
           </CardContent>
         </Card>

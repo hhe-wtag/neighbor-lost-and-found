@@ -196,6 +196,7 @@ const isEdit = computed(() => !!props.item)
 const statusOptions = [
   { value: 'open' as ItemStatus, label: 'Open' },
   { value: 'resolved' as ItemStatus, label: 'Resolved' },
+  { value: 'claimed' as ItemStatus, label: 'Claimed' },
 ]
 
 const categoryOptions = computed<string[]>(() => {
