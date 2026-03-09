@@ -10,15 +10,79 @@ from app.schemas.item_claim import (
     ClaimResponse,
     MyClaimResponse,
     ClaimListResponse,
-    ClaimUpdate,
     ClaimResolve,
+    ClaimMessageResponse,
+    MessageCreate,
 )
 
 router = APIRouter(prefix="/items", tags=["Claims"])
 
+# ------------------------------------------------------------------
+# GET /items/claims/{claim_id}/messages — fetch full message thread
+# ------------------------------------------------------------------
+@router.get(
+    "/claims/{claim_id}/messages",
+    response_model=APIResponse[list[ClaimMessageResponse]],
+    summary="Get message thread for a claim",
+)
+async def get_messages(
+    claim_id: int,
+    service: ItemClaimServiceDep,
+    current_user: CurrentUserDep,
+):
+    """Fetch the full message thread for a claim. Only the claimant or item owner can read."""
+    messages = await service.get_messages(claim_id, current_user.id)
+    return {
+        "success": True,
+        "data": messages,
+        "message": "Messages retrieved successfully.",
+    }
+
 
 # ------------------------------------------------------------------
-# POST /items/{item_id}/claims
+# POST /items/claims/{claim_id}/messages — send a message
+# ------------------------------------------------------------------
+@router.post(
+    "/claims/{claim_id}/messages",
+    response_model=APIResponse[ClaimMessageResponse],
+    status_code=status.HTTP_201_CREATED,
+    summary="Send a message in a claim thread",
+)
+async def send_message(
+    claim_id: int,
+    payload: MessageCreate,
+    service: ItemClaimServiceDep,
+    current_user: CurrentUserDep,
+):
+    """Send a message in a claim thread. Locked once the claim is resolved."""
+    message = await service.send_message(claim_id, current_user.id, payload)
+    return {"success": True, "data": message, "message": "Message sent successfully."}
+
+
+# ------------------------------------------------------------------
+# PATCH /items/claims/{claim_id}/resolve — approve or reject (owner only)
+# ------------------------------------------------------------------
+@router.patch(
+    "/claims/{claim_id}/resolve",
+    response_model=APIResponse[ClaimResponse],
+)
+async def resolve_claim(
+    claim_id: int,
+    payload: ClaimResolve,
+    service: ItemClaimServiceDep,
+    current_user: CurrentUserDep,
+):
+    """Approve or reject a claim. Only the item owner can resolve claims."""
+    claim = await service.resolve_claim(claim_id, current_user.id, payload)
+    return {
+        "success": True,
+        "data": claim,
+        "message": f"Claim {payload.status.value} successfully.",
+    }
+
+
+# ------------------------------------------------------------------
+# POST /items/{item_id}/claim — submit a claim on an item
 # ------------------------------------------------------------------
 @router.post(
     "/{item_id}/claim",
@@ -44,9 +108,9 @@ async def create_claim(
     return {"success": True, "data": claim, "message": "Claim submitted successfully."}
 
 
-# ------------------------------------------------------------------
+# --------------------------------------------------------------------------
 # GET /items/{item_id}/claims — list claims for an item (owner or claimant)
-# ------------------------------------------------------------------
+# --------------------------------------------------------------------------
 @router.get(
     "/{item_id}/claims",
     response_model=APIResponse[Union[List[ClaimListResponse], MyClaimResponse]],
@@ -66,52 +130,4 @@ async def get_claims_for_an_item(
         "success": True,
         "data": claims,
         "message": "Claims retrieved successfully.",
-    }
-
-
-# ------------------------------------------------------------------
-# PATCH /claims/{claim_id}/ — Update the claim message by claimant
-# ------------------------------------------------------------------
-@router.patch(
-    "/claims/{claim_id}",
-    response_model=APIResponse[ClaimResponse],
-)
-async def update_claim_message(
-    claim_id: int,
-    payload: ClaimUpdate,
-    service: ItemClaimServiceDep,
-    current_user: CurrentUserDep,
-):
-    """Approve or reject a claim. Only the item owner can resolve claims."""
-    claim = await service.update_claim(claim_id, current_user.id, payload)
-    return {
-        "success": True,
-        "data": claim,
-        "message": "Claim message updated successfully.",
-    }
-
-
-# ------------------------------------------------------------------
-# PATCH /claims/{claim_id}/resolve — approve or reject a claim (owner only)
-# ------------------------------------------------------------------
-@router.patch(
-    "/claims/{claim_id}/resolve",
-    response_model=APIResponse[ClaimResponse],
-)
-async def resolve_claim(
-    claim_id: int,
-    payload: ClaimResolve,
-    service: ItemClaimServiceDep,
-    current_user: CurrentUserDep,
-):
-    """Approve or reject a claim. Only the item owner can resolve claims."""
-    claim = await service.resolve_claim(
-        claim_id,
-        current_user.id,
-        payload,
-    )
-    return {
-        "success": True,
-        "data": claim,
-        "message": f"Claim {payload.status.value} successfully.",
     }

@@ -55,9 +55,9 @@
           </div>
         </div>
 
-        <Alert v-if="itemStore.error" variant="destructive" class="py-2">
+        <Alert v-if="claimStore.error" variant="destructive" class="py-2">
           <AlertCircle class="h-4 w-4" />
-          <AlertDescription class="text-xs">{{ itemStore.error }}</AlertDescription>
+          <AlertDescription class="text-xs">{{ claimStore.error }}</AlertDescription>
         </Alert>
 
         <Alert v-if="submitted" class="border-emerald-200 bg-emerald-50 py-2">
@@ -69,12 +69,12 @@
 
         <Button
           class="w-full bg-stone-900 text-stone-50 hover:bg-stone-800 active:scale-[0.98] transition-all"
-          :disabled="itemStore.loading || !message.trim() || submitted"
+          :disabled="claimStore.loading || !message.trim() || submitted"
           @click="submit"
         >
-          <Loader2 v-if="itemStore.loading" class="mr-2 h-4 w-4 animate-spin" />
+          <Loader2 v-if="claimStore.loading" class="mr-2 h-4 w-4 animate-spin" />
           <Send v-else class="mr-2 h-4 w-4" />
-          {{ itemStore.loading ? 'Submitting…' : 'Submit Claim' }}
+          {{ claimStore.loading ? 'Submitting…' : 'Submit Claim' }}
         </Button>
       </div>
     </Transition>
@@ -83,16 +83,16 @@
 
 <script setup lang="ts">
 import { ref } from 'vue'
-import { useItemStore } from '@/stores/item'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { HandHeart, Share2, Send, Loader2, AlertCircle, CheckCircle2 } from 'lucide-vue-next'
+import { useClaimStore } from '@/stores/claim.ts'
 
 const props = defineProps<{ itemId: number }>()
 
-const itemStore = useItemStore()
+const claimStore = useClaimStore()
 const showForm = ref(false)
 const message = ref('')
 const submitted = ref(false)
@@ -101,16 +101,15 @@ const toggle = () => {
   showForm.value = !showForm.value
   message.value = ''
   submitted.value = false
-  itemStore.clearError()
+  claimStore.clearError()
 }
 
 const submit = async () => {
   if (!message.value.trim()) return
-  const res = await itemStore.submitClaim(props.itemId, { message: message.value.trim() })
+  const res = await claimStore.submitClaim(props.itemId, { opening_message: message.value.trim() })
   if (res.success) {
     submitted.value = true
     message.value = ''
-    await itemStore.fetchClaims(props.itemId)
   }
 }
 </script>

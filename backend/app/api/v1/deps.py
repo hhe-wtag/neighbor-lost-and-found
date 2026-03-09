@@ -1,12 +1,12 @@
 from typing import Annotated
 
 from fastapi import Depends, HTTPException, status
-
 from fastapi.security import APIKeyCookie
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
 from app.models.user import User
+from app.repositories.claim_message import ClaimMessageRepository
 from app.repositories.item import ItemRepository
 from app.repositories.session import SessionRepository
 from app.repositories.user import UserRepository
@@ -51,6 +51,7 @@ ItemServiceDep = Annotated[ItemService, Depends(get_item_service)]
 def get_item_claim_service(session: AsyncSession = Depends(get_db)) -> ItemClaimService:
     return ItemClaimService(
         claim_repo=ClaimRepository(session),
+        message_repo=ClaimMessageRepository(session),
         item_repo=ItemRepository(session),
     )
 

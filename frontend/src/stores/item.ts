@@ -6,14 +6,10 @@ import type {
   ItemUpdate,
   ItemType,
   ItemStatus,
-  ClaimCreate,
 } from '@/interfaces/item'
 import axiosInstance from '@/plugins/axios'
 import { useErrorHandler } from '@/composables/useErrorHandler'
 
-/* =========================
-   API PATHS (FastAPI Spec)
-========================= */
 const API_PATHS = {
   ALL: 'items/',
   SINGLE: (id: number) => `items/${id}`,
@@ -21,20 +17,10 @@ const API_PATHS = {
   UPDATE: (id: number) => `items/${id}`,
   DELETE: (id: number) => `items/${id}`,
   MY_ITEMS: 'items/me',
-
   ITEM_CATEGORIES: 'items/categories',
-
   ITEM_PHOTO: (id: number) => `items/${id}/photo`,
-
-  CREATE_CLAIM: (id: number) => `items/${id}/claim`,
-  GET_CLAIMS: (id: number) => `items/${id}/claims`,
-  UPDATE_CLAIM_MESSAGE: (id: number) => `items/claims/${id}`,
-  UPDATE_CLAIM_STATUS: (id: number) => `items/claims/${id}/resolve`,
 } as const
 
-/* =========================
-   STORE STATE TYPE
-========================= */
 interface ItemStoreState {
   items: ItemListResponse[]
   total: number
@@ -42,7 +28,6 @@ interface ItemStoreState {
   limit: number
   itemCategories: string[]
   currentItem: ItemResponse | null
-  currentItemClaims: any
   loading: boolean
   error: string | null
   currentPage: number
@@ -60,84 +45,54 @@ export const useItemStore = defineStore('item', {
     hasNext: false,
     hasPrev: false,
     currentItem: null,
-    currentItemClaims: null,
     itemCategories: [],
     loading: false,
     error: null,
   }),
 
-  /* =========================
-     GETTERS
-  ========================= */
   getters: {
     getItemById:
       (state) =>
       (id: number): ItemListResponse | undefined =>
-        state.items.find((item: ItemListResponse) => item.id === id),
+        state.items.find((item) => item.id === id),
 
-    openItems: (state): ItemListResponse[] =>
-      state.items.filter((item: ItemListResponse) => item.status === 'open'),
-
-    lostItems: (state): ItemListResponse[] =>
-      state.items.filter((item: ItemListResponse) => item.type === 'lost'),
-
-    foundItems: (state): ItemListResponse[] =>
-      state.items.filter((item: ItemListResponse) => item.type === 'found'),
-
+    openItems: (state): ItemListResponse[] => state.items.filter((i) => i.status === 'open'),
+    lostItems: (state): ItemListResponse[] => state.items.filter((i) => i.type === 'lost'),
+    foundItems: (state): ItemListResponse[] => state.items.filter((i) => i.type === 'found'),
     hasError: (state): boolean => state.error !== null,
-
     totalPages: (state): number => Math.ceil(state.total / state.limit),
   },
 
-  /* =========================
-     ACTIONS
-  ========================= */
   actions: {
-    /* Generic API handler for APIResponse<T> */
     async handleApiCall<T>(
       apiCall: () => Promise<{ success: boolean; data: T; message: any }>,
-      fallbackError: string = 'Something Went Wrong, Please Try Again.',
-    ): Promise<{
-      success: boolean
-      message: string
-      data?: T
-    }> {
+      fallbackError = 'Something Went Wrong, Please Try Again.',
+    ): Promise<{ success: boolean; message: string; data?: T }> {
       const { handleError } = useErrorHandler()
       this.loading = true
       this.error = null
 
       try {
         const result = await apiCall()
-
         return {
           success: true,
           message:
             typeof result.message === 'string'
               ? result.message
               : Object.entries(result.message)
-                  .map(
-                    ([field, errs]) => `${field}: ${Array.isArray(errs) ? errs.join('. ') : errs}`,
-                  )
-                  .join('. \n'),
+                  .map(([f, e]) => `${f}: ${Array.isArray(e) ? e.join('. ') : e}`)
+                  .join('.\n'),
           data: result.data,
         }
       } catch (err: unknown) {
         const msg = handleError(err) || fallbackError
         this.error = msg
-        console.error(`API Error: ${fallbackError}`, err)
-
-        return {
-          success: false,
-          message: msg,
-        }
+        return { success: false, message: msg }
       } finally {
         this.loading = false
       }
     },
 
-    /* =========================
-       Fetch All Items
-    ========================= */
     async fetchAllItems(params?: {
       type?: ItemType
       category?: string[]
@@ -159,7 +114,6 @@ export const useItemStore = defineStore('item', {
         return data
       }, 'Failed to fetch items').then((res) => {
         if (res.success && res.data) {
-          // Map API response to your state
           this.items = res.data.items
           this.total = res.data.total
           this.offset = res.data.offset
@@ -172,9 +126,6 @@ export const useItemStore = defineStore('item', {
       })
     },
 
-    /* =========================
-       Fetch My Items
-    ========================= */
     async fetchMyItems() {
       return this.handleApiCall<ItemListResponse[]>(async () => {
         const { data } = await axiosInstance.get(API_PATHS.MY_ITEMS)
@@ -185,9 +136,6 @@ export const useItemStore = defineStore('item', {
       })
     },
 
-    /* =========================
-       Fetch Single Item
-    ========================= */
     async fetchItemById(id: number) {
       return this.handleApiCall<ItemResponse>(async () => {
         const { data } = await axiosInstance.get(API_PATHS.SINGLE(id))
@@ -202,9 +150,6 @@ export const useItemStore = defineStore('item', {
       })
     },
 
-    /* =========================
-       Fetch Item Categories
-    ========================= */
     async fetchItemCategories() {
       return this.handleApiCall<string[]>(async () => {
         const { data } = await axiosInstance.get(API_PATHS.ITEM_CATEGORIES)
@@ -215,9 +160,6 @@ export const useItemStore = defineStore('item', {
       })
     },
 
-    /* =========================
-       Create Item
-    ========================= */
     async createItem(payload: ItemCreate) {
       return this.handleApiCall<ItemResponse>(async () => {
         const { data } = await axiosInstance.post(API_PATHS.CREATE, payload)
@@ -228,9 +170,6 @@ export const useItemStore = defineStore('item', {
       })
     },
 
-    /* =========================
-       Update Item
-    ========================= */
     async updateItem(id: number, payload: ItemUpdate) {
       return this.handleApiCall<ItemResponse>(async () => {
         const { data } = await axiosInstance.patch(API_PATHS.UPDATE(id), payload)
@@ -245,9 +184,6 @@ export const useItemStore = defineStore('item', {
       })
     },
 
-    /* =========================
-       Delete Item
-    ========================= */
     async deleteItem(id: number) {
       return this.handleApiCall<void>(async () => {
         await axiosInstance.delete(API_PATHS.DELETE(id))
@@ -260,14 +196,10 @@ export const useItemStore = defineStore('item', {
       })
     },
 
-    /* =========================
-       Upload Item Photo
-    ========================= */
     async uploadItemPhoto(itemId: number, file: File) {
       return this.handleApiCall(async () => {
         const formData = new FormData()
         formData.append('file', file)
-
         const { data } = await axiosInstance.put(API_PATHS.ITEM_PHOTO(itemId), formData, {
           headers: { 'Content-Type': 'multipart/form-data' },
         })
@@ -275,9 +207,6 @@ export const useItemStore = defineStore('item', {
       }, 'Failed to upload item photo')
     },
 
-    /* =========================
-       Delete Item Photo
-    ========================= */
     async deleteItemPhoto(itemId: number) {
       return this.handleApiCall(async () => {
         const { data } = await axiosInstance.delete(API_PATHS.ITEM_PHOTO(itemId))
@@ -285,55 +214,6 @@ export const useItemStore = defineStore('item', {
       }, 'Failed to delete item photo')
     },
 
-    /* =========================
-       Create Claim for An Item
-    ========================= */
-    async submitClaim(itemId: number, payload: ClaimCreate) {
-      return this.handleApiCall<ItemResponse>(async () => {
-        const { data } = await axiosInstance.post(API_PATHS.CREATE_CLAIM(itemId), payload)
-        return data
-      })
-    },
-
-    /* =========================
-       Get All Claims for Item
-    ========================= */
-    async fetchClaims(itemId: number) {
-      return this.handleApiCall<ItemResponse>(async () => {
-        const { data } = await axiosInstance.get(API_PATHS.GET_CLAIMS(itemId))
-
-        return data
-      }, 'Failed to fetch claims').then((res) => {
-        if (res.success && res.data !== undefined) {
-          this.currentItemClaims = res.data
-        }
-        return res
-      })
-    },
-
-    /* =========================
-       Get All Claims for Item
-    ========================= */
-    async updateClaimMessage(claimId: number, payload: { message: string }) {
-      return this.handleApiCall<ItemResponse>(async () => {
-        const { data } = await axiosInstance.patch(API_PATHS.UPDATE_CLAIM_MESSAGE(claimId), payload)
-
-        return data
-      })
-    },
-
-    /* =========================
-       Get All Claims for Item
-    ========================= */
-    async updateClaimStatus(claimId: number, payload: { status: string }) {
-      return this.handleApiCall<ItemResponse>(async () => {
-        const { data } = await axiosInstance.patch(API_PATHS.UPDATE_CLAIM_STATUS(claimId), payload)
-
-        return data
-      })
-    },
-
-    /* Utilities */
     clearCurrentItem() {
       this.currentItem = null
     },

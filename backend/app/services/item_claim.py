@@ -2,27 +2,40 @@ from datetime import datetime, UTC
 from typing import List
 
 from app.core.exception import (
-    NotFoundException,
     BadRequestException,
     ForbiddenException,
+    NotFoundException,
 )
+from app.models.claim_message import ClaimMessage
 from app.models.item import ItemStatus
-from app.models.item_claim import ItemClaim, ClaimStatus
+from app.models.item_claim import ClaimStatus, ItemClaim
+from app.repositories.claim_message import ClaimMessageRepository
 from app.repositories.item_claim import ClaimRepository
 from app.repositories.item import ItemRepository
-from app.schemas.item_claim import ClaimCreate, ClaimUpdate, ClaimResolve
+from app.schemas.item_claim import ClaimCreate, ClaimResolve, MessageCreate
 
 
 class ItemClaimService:
-    def __init__(self, claim_repo: ClaimRepository, item_repo: ItemRepository):
+    def __init__(
+        self,
+        claim_repo: ClaimRepository,
+        message_repo: ClaimMessageRepository,
+        item_repo: ItemRepository,
+    ):
         self.claim_repo = claim_repo
+        self.message_repo = message_repo
         self.item_repo = item_repo
+
+    # ------------------------------------------------------------------
+    # Claims
+    # ------------------------------------------------------------------
 
     async def create_claim(
         self, item_id: int, current_user_id: int, payload: ClaimCreate
     ) -> ItemClaim:
         """
         Handle the business logic for creating a claim on an item.
+        The opening_message is posted as the first message in the thread.
         """
         item = await self.item_repo.get_by_id(item_id)
         if not item:
@@ -50,17 +63,24 @@ class ItemClaimService:
         if resolved:
             raise BadRequestException("This item already has a claim already resolved")
 
-        return await self.claim_repo.create(
+        claim = await self.claim_repo.create(
             schema=payload,
             item_id=item_id,
             claimant_user_id=current_user_id,
         )
 
+        # Post the opening_message as the first message in the thread
+        await self.message_repo.create(
+            claim.id, current_user_id, payload.opening_message
+        )
+
+        # Re-fetch so the opening message is included in the response
+        return await self.claim_repo.get_by_id(claim.id)
+
     async def get_claims_for_an_item(
         self, item_id: int, current_user_id: int
     ) -> ItemClaim | List[ItemClaim]:
         item = await self.item_repo.get_by_id(item_id)
-
         if not item:
             raise NotFoundException("Item not found")
 
@@ -83,10 +103,11 @@ class ItemClaimService:
         return claim
 
     async def update_claim(
-        self, claim_id, current_user_id, payload: ClaimUpdate
+        self, claim_id: int, current_user_id: int, payload: ClaimUpdate
     ) -> ItemClaim:
         """
-        Update claim message for an item by Claimant
+        Update claim message for an item by the claimant.
+        Only the claimant can edit their own pending claim.
         """
         claim = await self.get_claim_or_404(claim_id)
 
@@ -104,7 +125,7 @@ class ItemClaimService:
         """
         Approve or reject a claim.
         Only the item owner can resolve claims.
-        Approving a claim marks the item as CLAIMED and rejects all other pending claims.
+        Approving sets item to CLAIMED, rejecting resets item to OPEN.
         """
         claim = await self.get_claim_or_404(claim_id)
         item = await self.item_repo.get_by_id(claim.item_id)
@@ -112,15 +133,11 @@ class ItemClaimService:
         if item.user_id != current_user_id:
             raise ForbiddenException("Only the item owner can resolve claims")
 
-        # if claim.status != ClaimStatus.PENDING:
-        #     raise BadRequestException("Only pending claims can be resolved")
-
         now = datetime.now(UTC)
 
         if payload.status == ClaimStatus.APPROVED:
             item.status = ItemStatus.CLAIMED
             await self.item_repo.session.flush()
-
         else:
             item.status = ItemStatus.OPEN
             await self.item_repo.session.flush()
@@ -128,3 +145,46 @@ class ItemClaimService:
         return await self.claim_repo.update_status(
             claim, payload.status, resolved_at=now
         )
+
+    # ------------------------------------------------------------------
+    # Messages
+    # ------------------------------------------------------------------
+
+    async def get_messages(
+        self, claim_id: int, current_user_id: int
+    ) -> list[ClaimMessage]:
+        """
+        Fetch the full message thread.
+        Only the claimant and item owner can read messages.
+        """
+        claim = await self.get_claim_or_404(claim_id)
+        item = await self.item_repo.get_by_id(claim.item_id)
+        self._assert_participant(claim, item, current_user_id)
+        return await self.message_repo.get_by_claim_id(claim_id)
+
+    async def send_message(
+        self, claim_id: int, current_user_id: int, payload: MessageCreate
+    ) -> ClaimMessage:
+        """
+        Send a message in a claim thread.
+        Only the claimant and item owner can send messages.
+        Thread is locked once the claim is no longer pending.
+        """
+        claim = await self.get_claim_or_404(claim_id)
+        item = await self.item_repo.get_by_id(claim.item_id)
+        self._assert_participant(claim, item, current_user_id)
+
+        if claim.status != ClaimStatus.PENDING:
+            raise BadRequestException("Messages can only be sent on pending claims")
+
+        return await self.message_repo.create(claim_id, current_user_id, payload.body)
+
+    # ------------------------------------------------------------------
+    # Helpers
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def _assert_participant(claim: ItemClaim, item, user_id: int) -> None:
+        """Raise 403 if the user is neither the claimant nor the item owner."""
+        if user_id not in (claim.claimant_user_id, item.user_id):
+            raise ForbiddenException("You do not have access to this claim")
