@@ -12,8 +12,10 @@ from app.core.exception import (
     app_exception_handler,
     validation_exception_handler,
 )
+from app.middleware.image_upload_size import ImageUploadSizeMiddleware
 from app.middleware.logger import LoggingMiddleware
 from app.api.v1.deps import cookie_scheme  # noqa
+from app.middleware.rate_limiter import RateLimiterMiddleware
 
 
 @asynccontextmanager
@@ -32,6 +34,17 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+app.add_middleware(
+    RateLimiterMiddleware,
+    max_requests=3,
+    window_seconds=1.0,
+    excluded_paths={"/health", "/metrics", "/docs", "/openapi.json"},
+    excluded_prefixes=("/static", "/media"),
+    excluded_patterns=[
+        r"/api/v1/items/\d+/photo",
+    ],
+)
+app.add_middleware(ImageUploadSizeMiddleware)
 
 
 app.add_exception_handler(AppException, app_exception_handler)
