@@ -135,6 +135,14 @@ class ItemClaimService:
 
         now = datetime.now(UTC)
 
+        if item.user_id != current_user_id:
+            raise ForbiddenException("Only the item owner can resolve claims")
+
+        if claim.status != ClaimStatus.PENDING:
+            raise BadRequestException(
+                f"Cannot resolve a claim that is already {claim.status.value}"
+            )
+
         if payload.status == ClaimStatus.APPROVED:
             item.status = ItemStatus.CLAIMED
             await self.item_repo.session.flush()
