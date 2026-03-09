@@ -138,6 +138,14 @@ class ItemClaimService:
         if payload.status == ClaimStatus.APPROVED:
             item.status = ItemStatus.CLAIMED
             await self.item_repo.session.flush()
+
+            # Reject all other pending claims on this item
+            all_claims = await self.claim_repo.get_all_by_item(claim.item_id)
+            for other in all_claims:
+                if other.id != claim_id and other.status == ClaimStatus.PENDING:
+                    await self.claim_repo.update_status(
+                        other, ClaimStatus.REJECTED, resolved_at=now
+                    )
         else:
             item.status = ItemStatus.OPEN
             await self.item_repo.session.flush()
