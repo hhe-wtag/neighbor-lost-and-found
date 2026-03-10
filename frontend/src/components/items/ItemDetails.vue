@@ -105,34 +105,55 @@
             <!-- Meta Grid -->
             <div class="grid grid-cols-2 gap-x-6 gap-y-5">
               <div class="flex flex-col gap-1">
-                <span class="text-[0.68rem] font-medium uppercase tracking-widest text-stone-400"
-                  >Category</span
-                >
+                <span class="text-[0.68rem] font-medium uppercase tracking-widest text-stone-400">
+                  Category
+                </span>
                 <span class="text-sm capitalize text-stone-800">{{
                   itemStore.currentItem.category
                 }}</span>
               </div>
+
               <div class="flex flex-col gap-1">
-                <span class="text-[0.68rem] font-medium uppercase tracking-widest text-stone-400"
-                  >Location</span
-                >
+                <span class="text-[0.68rem] font-medium uppercase tracking-widest text-stone-400">
+                  Location
+                </span>
                 <span class="text-sm text-stone-800">{{
                   itemStore.currentItem.location_name
                 }}</span>
               </div>
+
               <div class="flex flex-col gap-1">
-                <span class="text-[0.68rem] font-medium uppercase tracking-widest text-stone-400"
-                  >Coordinates</span
-                >
-                <span class="font-mono text-xs text-stone-500"
-                  >{{ itemStore.currentItem.lat }}, {{ itemStore.currentItem.lng }}</span
-                >
+                <span class="text-[0.68rem] font-medium uppercase tracking-widest text-stone-400">
+                  Coordinates
+                </span>
+                <span class="font-mono text-xs text-stone-500">
+                  {{ itemStore.currentItem.lat }}, {{ itemStore.currentItem.lng }}
+                </span>
+              </div>
+
+              <div class="flex flex-col gap-1">
+                <span class="text-[0.68rem] font-medium uppercase tracking-widest text-stone-400">
+                  Posted On
+                </span>
+                <span class="text-sm text-stone-800">{{ formattedDate }}</span>
+              </div>
+
+              <!-- Post Owner -->
+              <div class="flex flex-col gap-1">
+                <span class="text-[0.68rem] font-medium uppercase tracking-widest text-stone-400">
+                  Posted By
+                </span>
+                <span class="text-sm text-stone-800">{{
+                  itemStore.currentItem.user?.name || 'Unknown'
+                }}</span>
               </div>
               <div class="flex flex-col gap-1">
-                <span class="text-[0.68rem] font-medium uppercase tracking-widest text-stone-400"
-                  >Posted On</span
-                >
-                <span class="text-sm text-stone-800">{{ formattedDate }}</span>
+                <span class="text-[0.68rem] font-medium uppercase tracking-widest text-stone-400">
+                  Email
+                </span>
+                <span class="text-sm text-stone-800">{{
+                  itemStore.currentItem.user?.email || 'Unknown'
+                }}</span>
               </div>
             </div>
 
