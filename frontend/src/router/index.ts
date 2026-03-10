@@ -8,6 +8,7 @@ import EditProfile from '@/views/Profile/EditProfile.vue'
 import ProfileView from '@/views/Profile/ProfileView.vue'
 import ChangePassword from '@/views/Profile/ChangePassword.vue'
 import ItemsView from '@/views/Items/ItemsView.vue'
+import MyItemsView from '@/views/Items/MyItemsView.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -58,6 +59,11 @@ const router = createRouter({
       path: '/items',
       name: 'items',
       component: ItemsView,
+    },
+    {
+      path: '/my-items',
+      name: 'my-items',
+      component: MyItemsView,
     },
     {
       path: '/items/:id',

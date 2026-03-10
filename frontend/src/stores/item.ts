@@ -23,6 +23,7 @@ const API_PATHS = {
 
 interface ItemStoreState {
   items: ItemListResponse[]
+  myItems: ItemListResponse[]
   total: number
   offset: number
   limit: number

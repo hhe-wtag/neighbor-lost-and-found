@@ -36,7 +36,7 @@ app.add_middleware(
 )
 app.add_middleware(
     RateLimiterMiddleware,
-    max_requests=3,
+    max_requests=20,
     window_seconds=1.0,
     excluded_paths={"/health", "/metrics", "/docs", "/openapi.json"},
     excluded_prefixes=("/static", "/media"),
