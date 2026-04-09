@@ -37,11 +37,12 @@ const onSubmit = handleSubmit(async (data) => {
   const result = await userStore.login(email, password)
 
   if (result.success) {
-    toast({
-      title: 'Login Successful',
-      description: result.message,
-    })
-    router.push({ name: 'profile' })
+    // toast({
+    //   title: 'Login Successful',
+    //   description: result.message,
+
+    // })
+    router.push({ name: 'items' })
   } else {
     toast({
       title: 'Login Failed',

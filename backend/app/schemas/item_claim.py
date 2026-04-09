@@ -17,10 +17,6 @@ class MessageCreate(BaseModel):
 class ClaimResolve(BaseModel):
     status: ClaimStatus
 
-    def model_post_init(self, __context) -> None:
-        if self.status == ClaimStatus.PENDING:
-            raise ValueError("Cannot resolve a claim to pending status")
-
 
 class ClaimedItemResponse(BaseModel):
     id: int
@@ -68,6 +64,7 @@ class MyClaimResponse(BaseModel):
     Response schema for the authenticated user's own claim on an item.
     Excludes claimant since the caller is already known to be the claimant.
     """
+
     id: int
     item_id: int
     status: ClaimStatus

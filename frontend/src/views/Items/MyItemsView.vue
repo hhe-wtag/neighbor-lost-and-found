@@ -3,7 +3,7 @@
     <!-- Header -->
     <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-8">
       <div>
-        <h1 class="font-['Playfair_Display'] text-3xl font-bold text-stone-900">Items</h1>
+        <h1 class="font-['Playfair_Display'] text-3xl font-bold text-stone-900">My Items</h1>
         <p class="mt-1 text-sm text-stone-400">Browse lost & found reports</p>
       </div>
 
@@ -24,75 +24,6 @@
         </Button>
       </div>
     </div>
-
-    <!-- Filters -->
-    <Card class="mb-8 border-0 bg-white/60 shadow-sm backdrop-blur-sm">
-      <CardContent class="flex flex-col gap-4 p-5 sm:flex-row sm:items-end">
-        <div class="flex-1 space-y-1.5">
-          <Label class="text-[0.68rem] uppercase tracking-widest text-stone-400">Type</Label>
-          <Select :model-value="filters.type" @update:model-value="(v) => (filters.type = v)">
-            <SelectTrigger class="border-stone-200 bg-white">
-              <SelectValue placeholder="All Types" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="lost">Lost</SelectItem>
-              <SelectItem value="found">Found</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div class="flex-1 space-y-1.5">
-          <Label class="text-[0.68rem] uppercase tracking-widest text-stone-400">Category</Label>
-          <Select
-            :model-value="filters.category"
-            @update:model-value="(v) => (filters.category = v)"
-          >
-            <SelectTrigger class="border-stone-200 bg-white">
-              <SelectValue placeholder="All Categories" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem
-                v-for="category in itemStore.itemCategories"
-                :key="category"
-                :value="category"
-              >
-                {{ category }}
-              </SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div class="flex-1 space-y-1.5">
-          <Label class="text-[0.68rem] uppercase tracking-widest text-stone-400">Status</Label>
-          <Select :model-value="filters.status" @update:model-value="(v) => (filters.status = v)">
-            <SelectTrigger class="border-stone-200 bg-white">
-              <SelectValue placeholder="All Status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="open">Open</SelectItem>
-              <!-- <SelectItem value="resolved">Resolved</SelectItem> -->
-              <SelectItem value="claimed">Claimed</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div class="flex gap-2 sm:w-48">
-          <Button
-            class="flex-1 bg-stone-900 text-stone-50 hover:bg-stone-800 active:scale-[0.98] transition-all"
-            @click="applyFilters"
-          >
-            Apply
-          </Button>
-          <Button
-            variant="outline"
-            class="flex-1 border-stone-200 text-stone-500 hover:text-stone-900 hover:border-stone-400 transition-all"
-            @click="clearFilters"
-          >
-            Clear
-          </Button>
-        </div>
-      </CardContent>
-    </Card>
 
     <!-- Loading -->
     <div v-if="itemStore.loading" class="flex flex-col items-center gap-3 py-24">
@@ -286,12 +217,7 @@ function goToPage(page: number) {
 }
 
 const fetchItems = async () => {
-  await itemStore.fetchAllItems({
-    ...filters.value,
-    keyword: searchQuery.value.trim() || undefined,
-    offset: (currentPage.value - 1) * pageSize.value,
-    limit: pageSize.value,
-  })
+  await itemStore.fetchMyItems()
   currentPage.value = itemStore.currentPage
 }
 

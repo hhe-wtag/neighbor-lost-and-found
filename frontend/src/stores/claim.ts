@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import axiosInstance from '@/plugins/axios'
 import { useErrorHandler } from '@/composables/useErrorHandler'
+import { toast } from '@/components/ui/toast' // <-- shadcn toast
 import type {
   ClaimResponse,
   ClaimCreate,
@@ -22,7 +23,6 @@ const API_PATHS = {
 
 interface ClaimStoreState {
   currentItemClaims: ClaimListResponse | MyClaimResponse | null
-  // Messages for the currently open claim thread
   activeClaimMessages: ClaimMessage[]
   activeClaimId: number | null
   loading: boolean
@@ -46,13 +46,13 @@ export const useClaimStore = defineStore('claim', {
         ? (state.currentItemClaims as ClaimListResponse)
         : null,
 
-    asMyClaim: (state): MyClaimResponse | null =>
-      !Array.isArray(state.currentItemClaims) && state.currentItemClaims !== null
-        ? (state.currentItemClaims as MyClaimResponse)
-        : null,
-
     hasExistingClaim: (state): boolean =>
-      !Array.isArray(state.currentItemClaims) && state.currentItemClaims !== null,
+      state.currentItemClaims !== null && !Array.isArray(state.currentItemClaims),
+
+    asMyClaim: (state): MyClaimResponse | null =>
+      state.currentItemClaims && !Array.isArray(state.currentItemClaims)
+        ? state.currentItemClaims
+        : null,
   },
 
   actions: {
@@ -63,21 +63,34 @@ export const useClaimStore = defineStore('claim', {
       const { handleError } = useErrorHandler()
       this.loading = true
       this.error = null
+
       try {
         const result = await apiCall()
+
+        if (result.success) {
+          // toast({
+          //   title: 'Success',
+          //   description: result.message,
+          // })
+        } else {
+          toast({
+            title: 'Error',
+            description: result.message || fallbackError,
+          })
+        }
+
         return {
-          success: true,
-          message:
-            typeof result.message === 'string'
-              ? result.message
-              : Object.entries(result.message)
-                  .map(([f, e]) => `${f}: ${Array.isArray(e) ? e.join('. ') : e}`)
-                  .join('.\n'),
+          success: result.success,
+          message: result.message,
           data: result.data,
         }
       } catch (err: unknown) {
         const msg = handleError(err) || fallbackError
         this.error = msg
+        toast({
+          title: 'Error',
+          description: msg,
+        })
         return { success: false, message: msg }
       } finally {
         this.loading = false
@@ -104,7 +117,6 @@ export const useClaimStore = defineStore('claim', {
       })
     },
 
-    /* ── Fetch full message thread for a specific claim ── */
     async fetchClaimMessages(claimId: number) {
       this.messagesLoading = true
       this.error = null
@@ -113,23 +125,31 @@ export const useClaimStore = defineStore('claim', {
         if (data.success) {
           this.activeClaimMessages = data.data
           this.activeClaimId = claimId
+        } else {
+          toast({
+            title: 'Error',
+            description: data.message,
+          })
         }
       } catch (err: unknown) {
         const { handleError } = useErrorHandler()
-        this.error = handleError(err) || 'Failed to fetch messages'
+        const msg = handleError(err) || 'Failed to fetch messages'
+        this.error = msg
+        toast({
+          title: 'Error',
+          description: msg,
+        })
       } finally {
         this.messagesLoading = false
       }
     },
 
-    /* ── Post a message to a claim thread ── */
     async postClaimMessage(claimId: number, payload: ClaimMessageCreate, itemId: number) {
       return this.handleApiCall<ClaimMessage>(async () => {
         const { data } = await axiosInstance.post(API_PATHS.POST_CLAIM_MESSAGE(claimId), payload)
         return data
       }, 'Failed to send message').then(async (res) => {
         if (res.success) {
-          // Append optimistically then refresh thread
           await this.fetchClaimMessages(claimId)
           await this.fetchClaims(itemId)
         }
@@ -163,6 +183,7 @@ export const useClaimStore = defineStore('claim', {
     clearError() {
       this.error = null
     },
+
     clearClaims() {
       this.currentItemClaims = null
     },

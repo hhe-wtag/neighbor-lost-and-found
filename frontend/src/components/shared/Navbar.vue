@@ -76,6 +76,13 @@
               <div class="py-1">
                 <DropdownMenuItem
                   class="flex items-center gap-2 px-3 py-2 text-sm text-stone-600 hover:text-stone-900 cursor-pointer"
+                  @click="router.push('/my-items')"
+                >
+                  <Package class="h-4 w-4 text-stone-400" />
+                  My Items
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  class="flex items-center gap-2 px-3 py-2 text-sm text-stone-600 hover:text-stone-900 cursor-pointer"
                   @click="router.push('/profile')"
                 >
                   <User class="h-4 w-4 text-stone-400" />
